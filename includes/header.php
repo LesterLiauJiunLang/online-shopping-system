@@ -41,9 +41,9 @@ if (!$auth) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Only include your existing auth.css --> 
     <title><?php echo isset($page_title) ? $page_title : 'Online Shopping System'; ?></title>
-    <link rel="stylesheet" href="/online-shopping-system-main/assets/css/style.css">
-    <link rel="stylesheet" href="/online-shopping-system-main/assets/css/auth.css">
-    <link rel="stylesheet" href="/online-shopping-system-main/assets/css/admin.css">
+    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/style.css">
+    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/auth.css">
+    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/admin.css">
     <style>
         /* Add minimal header styles here */
         .header {
