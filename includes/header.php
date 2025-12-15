@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 // Check if the auth library files exist - if not, use fallback
 $authLibPath = __DIR__ . '/../lib/auth.php';
 $helpersLibPath = __DIR__ . '/../lib/helpers.php';
-$base_url = 'http://' . $_SERVER['HTTP_HOST'] . '/online-shopping-system-main/';
+$base_url = 'http://' . $_SERVER['HTTP_HOST'] . '/online-shopping-system-product/';
 
 // Initialize auth variable
 $auth = null;

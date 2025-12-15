@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../app/models/User.php';
+require_once '../app/models/UserModel.php';
 
 $message = '';
 $message_type = '';

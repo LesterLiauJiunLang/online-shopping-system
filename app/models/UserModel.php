@@ -20,15 +20,19 @@ class User {
         return $stmt->fetch();
     }
 
-    public function create($username, $email, $password, $role = 'customer') {
-        $hash = password_hash($password, PASSWORD_DEFAULT);
+    public function create($username, $email, $password, $role = 'member') {  // Changed from 'customer' to 'member'
+    $hash = password_hash($password, PASSWORD_DEFAULT);
 
-        $stmt = $this->conn->prepare(
-            "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)"
-        );
+    $stmt = $this->conn->prepare(
+        "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)"
+    );
 
-        return $stmt->execute([$username, $email, $hash, $role]);
+    if ($stmt->execute([$username, $email, $hash, $role])) {
+        return $this->conn->lastInsertId();  // Return the new user ID
     }
+    
+    return false;
+}
 
     public function emailExists($email) {
         $stmt = $this->conn->prepare("SELECT user_id FROM users WHERE email = ?");

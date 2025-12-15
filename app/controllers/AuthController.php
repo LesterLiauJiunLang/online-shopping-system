@@ -32,23 +32,33 @@ class AuthController {
     }
 
     public function register($username, $email, $password) {
-        if ($this->user->emailExists($email)) {
-            return "Email already exists.";
-        }
-
-        if ($this->user->usernameExists($username)) {
-            return "Username already exists.";
-        }
-
-        $this->user->create($username, $email, $password);
-        return "success";
+    if ($this->user->emailExists($email)) {
+        return "Email already exists.";
     }
 
-    public function logout() {
-        session_destroy();
-        header("Location: login.php");
-        exit;
+    if ($this->user->usernameExists($username)) {
+        return "Username already exists.";
     }
+
+    // Create the user
+    $success = $this->user->create($username, $email, $password);
+    
+    if ($success) {
+        // Automatically log in the user after registration
+        $user = $this->user->findByEmailOrUsername($email);
+        
+        if ($user) {
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['logged_in'] = true;
+            
+            return "success";
+        }
+    }
+    
+    return "Registration failed. Please try again.";
+}
 
     public function isAdmin() {
         return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
