@@ -9,8 +9,11 @@ class AuthController {
     private $user;
 
     public function __construct() {
-        $this->user = new User();
-    }
+    // Add database connection
+    require_once __DIR__ . '/../config/database.php';
+    $db = Database::getConnection();
+    $this->user = new User($db);
+}
 
     public function login($value, $password) {
         $user = $this->user->findByEmailOrUsername($value);

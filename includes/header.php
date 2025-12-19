@@ -4,10 +4,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Set base URL for consistent navigation
+$base_url = '/online-shopping-system-product';
+
 // Check if the auth library files exist - if not, use fallback
 $authLibPath = __DIR__ . '/../lib/auth.php';
 $helpersLibPath = __DIR__ . '/../lib/helpers.php';
-$base_url = 'http://' . $_SERVER['HTTP_HOST'] . '/online-shopping-system-product/';
 
 // Initialize auth variable
 $auth = null;
@@ -41,9 +43,9 @@ if (!$auth) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Only include your existing auth.css --> 
     <title><?php echo isset($page_title) ? $page_title : 'Online Shopping System'; ?></title>
-    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/style.css">
-    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/auth.css">
-    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/admin.css">
+    <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/auth.css">
+    <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/admin.css">
     <style>
         /* Add minimal header styles here */
         .header {
@@ -51,31 +53,80 @@ if (!$auth) {
             color: white;
             padding: 15px;
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .header a {
+        .logo {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .logo a {
             color: white;
-            margin: 0 10px;
+            text-decoration: none;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .nav-links a:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .nav-links .logout-btn {
+            background-color: #ff4757;
+        }
+        .nav-links .logout-btn:hover {
+            background-color: #ff3742;
+        }
+        .welcome {
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+        .admin-menu {
+            display: flex;
+            gap: 10px;
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="logo">
-            <strong>Online Shopping</strong>
+            <a href="<?php echo $base_url; ?>/public/index.php">🛒 Online Shopping</a>
         </div>
         <div class="nav-links">
             <?php if ($auth->isLoggedIn()): ?>
                 <span class="welcome">
-                    Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?> 
-                    (<?php echo htmlspecialchars($_SESSION['role'] ?? 'member'); ?>)
+                    Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>
                 </span>
+                
                 <?php if ($auth->isAdmin()): ?>
-                    <a href="admin/members.php">Manage Members</a>
+                    <div class="admin-menu">
+                        <a href="<?php echo $base_url; ?>/public/admin/products.php">Products</a>
+                        <a href="<?php echo $base_url; ?>/public/admin/product_add.php">Add Product</a>
+                        <a href="<?php echo $base_url; ?>/public/admin/orders.php">Orders</a>
+                        <a href="<?php echo $base_url; ?>/public/admin/categories.php">Categories</a>
+                    </div>
+                <?php else: ?>
+                    <a href="<?php echo $base_url; ?>/public/dashboard.php">Dashboard</a>
+                    <a href="<?php echo $base_url; ?>/public/products.php">Shop</a>
+                    <a href="<?php echo $base_url; ?>/public/cart.php">Cart</a>
                 <?php endif; ?>
-                <a href="logout.php">Logout</a>
+                
+                <a href="<?php echo $base_url; ?>/public/logout.php" class="logout-btn">Logout</a>
             <?php else: ?>
-                <a href="login.php">Login</a>
-                <a href="register.php">Register</a>
+                <a href="<?php echo $base_url; ?>/public/index.php">Home</a>
+                <a href="<?php echo $base_url; ?>/public/products.php">Products</a>
+                <a href="<?php echo $base_url; ?>/public/login.php">Login</a>
+                <a href="<?php echo $base_url; ?>/public/register.php">Register</a>
             <?php endif; ?>
         </div>
     </div>

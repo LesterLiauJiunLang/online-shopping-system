@@ -34,32 +34,56 @@ class Order {
     
     // For admin dashboard - all recent orders
     public function getRecentOrders($limit = 10) {
-        // Check if 'order_date' or 'created_at' column exists
-        $stmt = $this->conn->prepare("SHOW COLUMNS FROM orders LIKE 'created_at'");
-        $stmt->execute();
-        $columnExists = $stmt->fetch();
+    try {
+        // First check what columns exist in the orders table
+        $checkColumns = $this->conn->query("SHOW COLUMNS FROM orders")->fetchAll();
+        $columns = array_column($checkColumns, 'Field');
         
-        $dateColumn = $columnExists ? 'created_at' : 'order_date';
+        // Determine which date column to use
+        $dateColumn = in_array('created_at', $columns) ? 'created_at' : 'order_date';
         
-        $stmt = $this->conn->prepare("
-            SELECT o.*, u.username as customer_name, u.email 
+        // Check if users table has username or name column
+        $userColumns = $this->conn->query("SHOW COLUMNS FROM users")->fetchAll();
+        $userFields = array_column($userColumns, 'Field');
+        $userNameColumn = in_array('username', $userFields) ? 'username' : 
+                         (in_array('name', $userFields) ? 'name' : 'email');
+        
+        // Build the query
+        $sql = "
+            SELECT 
+                o.*, 
+                u.{$userNameColumn} as customer_name, 
+                u.email 
             FROM orders o 
-            JOIN users u ON o.user_id = u.user_id 
-            ORDER BY o.$dateColumn DESC 
+            LEFT JOIN users u ON o.user_id = u.user_id 
+            ORDER BY o.{$dateColumn} DESC 
             LIMIT ?
-        ");
+        ";
+        
+        $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(1, $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+    } catch (Exception $e) {
+        error_log("Error in getRecentOrders: " . $e->getMessage());
+        return [];
     }
+}
     
     // For admin dashboard - total orders count
-    public function getTotalOrdersCount() {
+    // For admin dashboard - total orders count
+public function getTotalOrdersCount() {
+    try {
         $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM orders");
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Error in getTotalOrdersCount: " . $e->getMessage());
+        return 0;
     }
+}
     
     // For admin dashboard - total revenue
     public function getTotalRevenue() {

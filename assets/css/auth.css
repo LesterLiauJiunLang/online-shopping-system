@@ -12,15 +12,6 @@
     font-family: "Segoe UI", Arial, sans-serif;
 }
 
-.auth-page-container {
-    width: 100%;
-    max-width: 450px;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
 .auth-card {
     background: white;
     width: 100%;
@@ -57,7 +48,7 @@
 
 /* Form styles */
 .form-group {
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 }
 
 .form-group label {
@@ -78,6 +69,7 @@
     border: 1px solid #ccc;
     font-size: 14px;
     transition: border-color 0.3s;
+    box-sizing: border-box;
 }
 
 .input-wrapper span {
@@ -123,6 +115,7 @@
     font-size: 15px;
     cursor: pointer;
     transition: all 0.3s;
+    box-sizing: border-box;
 }
 
 .btn-auth:hover {
@@ -171,16 +164,15 @@
     border-color: #c8e6c9;
 }
 
-/* Password strength indicator */
-.password-strength {
-    font-size: 12px;
-    color: #666;
-    margin-top: 5px;
-}
-
+/* Password validation */
+.password-strength,
 .password-match {
     font-size: 12px;
     margin-top: 5px;
+}
+
+.password-strength {
+    color: #666;
 }
 
 .match-good {
@@ -197,8 +189,6 @@
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: #4CAF50;
-    color: white;
     padding: 15px 25px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -209,6 +199,8 @@
     gap: 10px;
     max-width: 400px;
     width: 90%;
+    color: white;
+    box-sizing: border-box;
 }
 
 .toast-notification.error {
@@ -234,13 +226,33 @@
     }
 }
 
-@keyframes fadeOut {
-    from {
-        opacity: 1;
-    }
-    to {
-        opacity: 0;
-    }
+/* Loading overlay for better UX */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    display: none;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #5a4bff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* Forgot password specific */
@@ -252,6 +264,7 @@
     font-size: 14px;
     color: #1565c0;
     border: 1px solid #bbdefb;
+    box-sizing: border-box;
 }
 
 .back-link {
@@ -268,28 +281,4 @@
 .back-link a:hover {
     color: #4a3de0;
     text-decoration: underline;
-}
-
-/* Dashboard styles (keep if needed) */
-.dashboard-info {
-    background: #f4f4f4;
-    padding: 15px;
-    border-radius: 6px;
-    margin: 20px 0;
-}
-
-.btn-logout {
-    display: inline-block;
-    padding: 10px 20px;
-    background: #dc3545;
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-.btn-logout:hover {
-    background: #c82333;
 }
