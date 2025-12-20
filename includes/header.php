@@ -1,9 +1,13 @@
 <?php
-session_start();
-require_once '../lib/auth.php';
-require_once '../lib/helpers.php';
+// includes/header.php
 
-$auth = new Auth();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../lib/base.php';  // Fixed path
+require_once __DIR__ . '/../lib/auth.php'; 
+check_remember_token(); 
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,26 +17,39 @@ $auth = new Auth();
     <title>Online Shopping System</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-        .header { background: #333; color: white; padding: 15px; }
+        .header { background: #333; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
         .header a { color: white; text-decoration: none; margin: 0 15px; }
+        .header img { width: 36px; height: 36px; border-radius: 5px; border: 1px solid #666; object-fit: cover; }
+        .header .profile { display: flex; align-items: center; gap: 10px; }
         .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: white; border-radius: 5px; }
-        .form-container { max-width: 400px; margin: 50px auto; padding: 20px; }
-        .nav { margin: 20px 0; }
     </style>
 </head>
 <body>
     <div class="header">
-        <?php if ($auth->isLoggedIn()): ?>
-            Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?> 
-            (<?php echo htmlspecialchars($_SESSION['role']); ?>)
-            <a href="dashboard.php">Dashboard</a>
-            <?php if ($auth->isAdmin()): ?>
-                <a href="admin/members.php">Manage Members</a>
+        <div>
+            <?php if (is_logged_in()): ?>
+                <a href="dashboard.php">Dashboard</a>
+                <?php if (is_admin()): ?>
+                    <a href="admin/users.php">Manage Members</a>
+                <?php else: ?>
+                    <a href="shop.php">Browse Products</a>
+                    <a href="cart.php">Cart</a>
+                    <a href="orders.php">My Orders</a>
+                <?php endif; ?>
+            <?php else: ?>
+                <a href="login.php">Login</a>
+                <a href="register.php">Register</a>
             <?php endif; ?>
-            <a href="logout.php" style="float: right;">Logout</a>
-        <?php else: ?>
-            <a href="login.php">Login</a>
-            <a href="register.php">Register</a>
+        </div>
+
+        <?php if (is_logged_in()): ?>
+        <div class="profile">
+            <a href="profile.php">
+                <img src="<?= base('uploads/profile/' . encode($_SESSION['photo'] ?? 'avatar.png')) ?>" alt="Profile">
+            </a>
+            <span><?= encode($_SESSION['username']) ?> (<?= encode($_SESSION['role']) ?>)</span>
+            <a href="logout.php">Logout</a>
+        </div>
         <?php endif; ?>
     </div>
     <div class="container">

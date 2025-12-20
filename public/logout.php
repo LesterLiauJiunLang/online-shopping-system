@@ -1,6 +1,11 @@
 <?php
+// logout.php - PROCEDURAL VERSION
+
+// Load the necessary files in correct order
+require_once '../lib/base.php';
+require_once '../config/database.php';
 require_once '../lib/auth.php';
 
-$auth = new Auth();
-$auth->logout();
+// Call the logout function directly
+logout();
 ?>
