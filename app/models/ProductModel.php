@@ -5,12 +5,13 @@ class Product {
     private $conn;
 
     public function __construct($conn = null) {
-        if ($conn === null) {
-            $this->conn = Database::connect();
-        } else {
-            $this->conn = $conn;
-        }
+    if ($conn === null) {
+        global $_db;  // Use existing connection
+        $this->conn = $_db;
+    } else {
+        $this->conn = $conn;
     }
+}
 
     public function getAllProducts() {
         $stmt = $this->conn->prepare("

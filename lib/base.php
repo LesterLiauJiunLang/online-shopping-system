@@ -268,4 +268,16 @@ function format_date($date, $format = 'Y-m-d H:i') {
     return date($format, strtotime($date));
 }
 
+// ============================================================================
+// Database Helper Functions
+// ============================================================================
+function db() {
+    global $_db;
+    return $_db;
+}
+
+function getDatabase() {
+    return db();
+}
+
 ?>

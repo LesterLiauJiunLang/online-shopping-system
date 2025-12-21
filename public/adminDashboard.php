@@ -1,13 +1,24 @@
-[file name]: adminDashboard.php
-[file content begin]
+
 <?php
+// Start session
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in and is admin
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION['role'] !== 'admin') {
-    header("Location: login.php");
+// Include auth functions
+require_once __DIR__ . '/../lib/auth.php';
+
+// Use auth() function to check login and role
+require_login(); // Check if user is logged in
+
+// Check if user is admin
+// First check new system (Practical 7 style), then old system
+$user = $_SESSION['user'] ?? null;
+$user_role = $user['role'] ?? $_SESSION['role'] ?? 'member';
+
+if ($user_role !== 'admin') {
+    // Redirect non-admins to member dashboard
+    header("Location: memberDashboard.php");
     exit();
 }
 
@@ -19,13 +30,14 @@ require_once __DIR__ . '/../app/config/database.php';
 require_once __DIR__ . '/../app/models/UserModel.php';
 require_once __DIR__ . '/../app/models/OrderModel.php';
 require_once __DIR__ . '/../app/models/ProductModel.php';
+require_once __DIR__ . '/../lib/base.php';
 
 include_once __DIR__ . '/../includes/header.php';
 
 /* ========================
    Initialize Database Connection
 ======================== */
-$db = Database::getConnection();
+$db = db();
 $userModel = new User($db);
 $currentUser = $userModel->getUserById($_SESSION['user_id']);
 
@@ -169,6 +181,15 @@ $productModel = new Product($db);
 
 // Try to get data, handle errors gracefully
 try {
+     $stmt = $db->prepare("SELECT * FROM users WHERE user_id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $currentUser = $stmt->fetch();
+    
+    if (!$currentUser) {
+        session_destroy();
+        header("Location: login.php");
+        exit();
+    }
     $totalOrders = $orderModel->getTotalOrdersCount();
     $totalRevenue = $orderModel->getTotalRevenue();
     $totalProducts = $productModel->getTotalProductsCount();
@@ -287,6 +308,8 @@ try {
     $growthPercentage = 0;
     $topProducts = [];
     error_log("Dashboard error: " . $e->getMessage());
+    echo "Database connection error. Please try again later.";
+    exit();
 }
 
 // Report Generation Functions

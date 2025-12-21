@@ -12,8 +12,9 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION[
 }
 
 require_once __DIR__ . '/../../app/config/database.php';
+require_once __DIR__ . '/../../lib/base.php';
 
-$db = Database::getConnection();
+$db = db();
 
 if (!isset($_GET['order_id'])) {
     header('HTTP/1.1 400 Bad Request');

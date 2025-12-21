@@ -9,11 +9,12 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION[
     exit();
 }
 
+require_once __DIR__ . '/../../lib/base.php';
 require_once __DIR__ . '/../../app/config/config.php';
 require_once __DIR__ . '/../../app/config/database.php';
 require_once __DIR__ . '/../../app/models/ProductModel.php';
 
-$db = Database::getConnection();
+$db = db();
 $productModel = new Product($db);
 
 // Handle product deletion
@@ -234,7 +235,7 @@ $products = $stmt->fetchAll();
         $full_image_path = __DIR__ . '/../../' . $first_image['file_path'];
         if (file_exists($full_image_path)) {
             // Use relative path from root
-            $image_path = '/online-shopping-system-product/' . $first_image['file_path'];
+            $image_path = '/online-shopping-system/' . $first_image['file_path'];
         }
     }
     

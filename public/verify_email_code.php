@@ -4,28 +4,15 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 
-
-if (!function_exists('is_logged_in')) {
-    function is_logged_in() {
-        return isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
-    }
-}
-
-// Also add redirect function if missing
-if (!function_exists('redirect')) {
-    function redirect($url) {
-        header("Location: $url");
-        exit;
-    }
-}
-
 require_once '../lib/base.php';
+require_once '../lib/auth.php'; // Add this for is_logged_in() function
 
 $_title = 'Verify Email Code';
 
 // If already logged in and verified, redirect
 if (is_logged_in() && isset($_SESSION['email_verified']) && $_SESSION['email_verified']) {
-    redirect('dashboard.php');
+    header('Location: dashboard.php');
+    exit;
 }
 
 $error = '';
@@ -86,7 +73,8 @@ if (is_post()) {
                 
                 $success = '✅ Email verified successfully!';
                 temp('success', $success);
-                redirect('dashboard.php');
+                header('Location: dashboard.php');
+                exit;
                 
             } else {
                 // Check if code expired

@@ -1,5 +1,4 @@
-[file name]: product_add.php
-[file content begin]
+
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -18,8 +17,9 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION[
 
 require_once __DIR__ . '/../../app/config/config.php';
 require_once __DIR__ . '/../../app/config/database.php';
+require_once __DIR__ . '/../../lib/base.php';
 
-$db = Database::getConnection();
+$db = db();
 
 // Define base_url if not already defined
 if (!isset($base_url)) {

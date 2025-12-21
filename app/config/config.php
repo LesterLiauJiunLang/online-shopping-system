@@ -1,7 +1,7 @@
 <?php
 
 // Base URL - adjust this based on your setup
-define('BASE_URL', 'http://' . $_SERVER['HTTP_HOST'] . '/online-shopping-system-product/');
+define('BASE_URL', 'http://' . $_SERVER['HTTP_HOST'] . '/online-shopping-system/');
 define('ASSETS_URL', BASE_URL . 'assets/');
 define('CSS_URL', ASSETS_URL . 'css/');
 define('JS_URL', ASSETS_URL . 'js/');
@@ -13,8 +13,8 @@ define('UPLOAD_PROFILES_PATH', UPLOAD_BASE_PATH . 'profiles/');
 define('UPLOAD_PRODUCTS_PATH', UPLOAD_BASE_PATH . 'products/');
 
 // URL paths for accessing uploaded files
-define('UPLOAD_PROFILES_URL', '/online-shopping-system-product/uploads/profiles/');
-define('UPLOAD_PRODUCTS_URL', '/online-shopping-system-product/uploads/products/');
+define('UPLOAD_PROFILES_URL', '/online-shopping-system/uploads/profiles/');
+define('UPLOAD_PRODUCTS_URL', '/online-shopping-system/uploads/products/');
 
 // File size limits
 define('MAX_FILE_SIZE', 2 * 1024 * 1024); // 2MB

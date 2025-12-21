@@ -1,5 +1,4 @@
 <?php
-<<<<<<< HEAD
 
 // ============================================================================
 // Session Start (MUST BE HERE!)
@@ -41,7 +40,38 @@ function auth(...$roles) {
     }
 }
 
+// Add this at the end of your auth.php file (or create a new Auth class file):
 
+class Auth {
+    public function isLoggedIn() {
+        return is_logged_in();
+    }
+    
+    public function isAdmin() {
+        return is_admin();
+    }
+    
+    // You can add more methods as needed
+    public function requireLogin() {
+        require_login();
+    }
+    
+    public function requireAdmin() {
+        require_admin();
+    }
+    
+    public function login($username, $password) {
+        return login($username, $password);
+    }
+    
+    public function logout() {
+        logout();
+    }
+    
+    public function checkRememberToken() {
+        return check_remember_token();
+    }
+}
 
 // ============================================================================
 // Basic Authentication Functions
@@ -60,30 +90,6 @@ function require_login() {
     if (!is_logged_in()) {
         header("Location: login.php");
         exit();
-=======
-class Auth {
-    public function isLoggedIn() {
-        return isset($_SESSION['user_id']) && isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
-    }
-    
-    public function isAdmin() {
-        return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
-    }
-    
-    public function requireLogin() {
-        if (!$this->isLoggedIn()) {
-            header("Location: login.php");
-            exit();
-        }
-    }
-    
-    public function requireAdmin() {
-        $this->requireLogin();
-        if (!$this->isAdmin()) {
-            header("Location: dashboard.php");
-            exit();
-        }
->>>>>>> origin/LoginAndProductPart
     }
 }
 

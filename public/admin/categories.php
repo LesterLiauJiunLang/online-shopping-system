@@ -12,8 +12,9 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION[
 
 require_once __DIR__ . '/../../app/config/config.php';
 require_once __DIR__ . '/../../app/config/database.php';
+require_once __DIR__ . '/../../lib/base.php';
 
-$db = Database::getConnection();
+$db = db();
 
 $error = '';
 $success = '';
