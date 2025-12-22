@@ -1,0 +1,379 @@
+/* Email Verification Page Styles */
+.verification-container {
+    max-width: 500px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.verification-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #444 0%, #222 100%); /* Changed to black gradient */
+    color: white;
+    padding: 25px 30px;
+    text-align: center;
+    border-bottom: 1px solid #444;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.card-header i {
+    margin-right: 10px;
+    color: #007bff;
+}
+
+.card-body {
+    padding: 30px;
+    background: white;
+}
+
+.verification-info {
+    display: flex;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.info-icon {
+    font-size: 48px;
+    color: #007bff;
+    margin-right: 20px;
+}
+
+.info-content h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.info-content p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.user-email {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 10px 0;
+}
+
+.verification-form .form-group {
+    margin-bottom: 25px;
+}
+
+.verification-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.verification-form input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 18px;
+    text-align: center;
+    letter-spacing: 3px;
+    transition: border-color 0.3s;
+}
+
+.verification-form input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-text {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 14px;
+}
+
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+/* Button Styles - ALL BLUE (#007bff) with darker blue on hover */
+.btn {
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    gap: 8px;
+}
+
+.btn i {
+    font-size: 14px;
+}
+
+/* Primary button - Blue */
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0069d9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Secondary button - Now also blue */
+.btn-secondary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #0069d9;
+    color: white;
+}
+
+/* Outline button - Now solid blue */
+.btn-outline {
+    background: #007bff;
+    color: white;
+    border: 2px solid #007bff;
+}
+
+.btn-outline:hover {
+    background: #0069d9;
+    border-color: #0069d9;
+    color: white;
+}
+
+.btn-verify {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.btn-verify:hover {
+    background: #0069d9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-loading {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.notification {
+    padding: 15px 20px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 15px;
+}
+
+.notification.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.notification.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.notification.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.success-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #28a745;
+}
+
+.success-message i {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.success-message p {
+    margin-top: 10px;
+    color: #666;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid #f5c6cb;
+}
+
+.error-message i {
+    margin-right: 10px;
+}
+
+.verification-tips {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    color: #666;
+}
+
+.verification-tips h5 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.verification-tips ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.verification-tips li {
+    margin-bottom: 8px;
+}
+
+.email-status {
+    margin-top: 25px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.status-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.status-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.status-value {
+    color: #333;
+}
+
+.status-value.not-verified {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.status-value.verified {
+    color: #28a745;
+    font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .verification-container {
+        margin: 20px auto;
+        padding: 0 15px;
+    }
+    
+    .card-header {
+        padding: 20px;
+    }
+    
+    .card-header h2 {
+        font-size: 20px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .verification-info {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+    }
+    
+    .info-icon {
+        margin-right: 0;
+        margin-bottom: 15px;
+        font-size: 36px;
+    }
+    
+    .verification-form input {
+        font-size: 16px;
+        padding: 10px 12px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn-verify,
+    .btn-secondary,
+    .btn-outline {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .status-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .status-label {
+        margin-bottom: 5px;
+    }
+}
+
+/* Animation for form submission */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fa-spinner.fa-spin {
+    animation: spin 1s linear infinite;
+}

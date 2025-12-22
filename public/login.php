@@ -1,52 +1,191 @@
 <?php
-require_once '../includes/header.php';
+// Force session start at the VERY TOP
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once '../lib/base.php';  
+require_once '../lib/auth.php';
 
-$error = '';
-$auth = new Auth();
-
-// Redirect if already logged in
-if ($auth->isLoggedIn()) {
-    header("Location: dashboard.php");
+// Check if already logged in 
+if (is_logged_in()) {
+    redirect('dashboard.php');
     exit();
 }
 
-// Process login form
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = Helpers::sanitize($_POST['username']);
-    $password = $_POST['password'];
+// Check for registration success message from register.php
+if (isset($_SESSION['registration_success']) && $_SESSION['registration_success']) {
+    $registration_message = $_SESSION['registration_message'] ?? 'Registration successful!';
+    unset($_SESSION['registration_success']);
+    unset($_SESSION['registration_message']);
+}
+
+// ========== AJAX LOGIN ENDPOINT ==========
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_login'])) {
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $remember_me = isset($_POST['remember_me']) ? 1 : 0;
     
-    $result = $auth->login($username, $password);
+    $response = [
+        'success' => false,
+        'message' => '',
+        'redirect' => null,
+        'needs_verification' => false
+    ];
     
-    if ($result === "success") {
-        header("Location: dashboard.php");
+    // Validate CSRF
+    if (!isset($_POST['csrf_token']) || !validate_csrf($_POST['csrf_token'])) {
+        $response['message'] = "Security token invalid.";
+        header('Content-Type: application/json');
+        echo json_encode($response);
         exit();
+    }
+    
+    // Call login function
+    $result = login($username, $password);
+    
+    if ($result === "success" || $result === "success_needs_verification") {
+        $response['success'] = true;
+        $response['message'] = "Login successful!";
+        $response['redirect'] = 'dashboard.php';
+        
+        // Set remember me token if checked
+        if ($remember_me) {
+            generate_remember_token($_SESSION['user_id']);
+        }
+        
+        // Check if email needs verification
+        if ($result === "success_needs_verification" || !$_SESSION['email_verified']) {
+            $response['needs_verification'] = true;
+            $_SESSION['needs_email_verification'] = true;
+        }
+        
+        // Check if coming from registration
+        if (isset($_SESSION['show_verification_reminder'])) {
+            $response['needs_verification'] = true;
+            $_SESSION['needs_email_verification'] = true;
+            unset($_SESSION['show_verification_reminder']);
+        }
+        
     } else {
-        $error = $result;
+        $response['message'] = $result;
+    }
+    
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit();
+}
+// ========================================
+
+// Process traditional form submission (non-AJAX)
+if (is_post() && !isset($_POST['ajax_login'])) {
+    $username = post('username');
+    $password = post('password');
+    $remember_me = isset($_POST['remember_me']) ? 1 : 0;
+    
+    $result = login($username, $password);
+    
+    if ($result === "success" || $result === "success_needs_verification") {
+        if ($remember_me) {
+            generate_remember_token($_SESSION['user_id']);
+        }
+        
+        if ($result === "success_needs_verification" || !$_SESSION['email_verified']) {
+            $_SESSION['needs_email_verification'] = true;
+        }
+        
+        if (isset($_SESSION['show_verification_reminder'])) {
+            $_SESSION['needs_email_verification'] = true;
+            unset($_SESSION['show_verification_reminder']);
+        }
+        
+        redirect('dashboard.php');
+        
+    } else {
+        // Handle error messages
+        $_err['login'] = $result;
     }
 }
+
 ?>
 
-<div class="form-container">
-    <h2>Login</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Online Shopping System</title>
     
-    <?php echo Helpers::displayError($error); ?>
+    <!-- External CSS Files -->
+    <link rel="stylesheet" href="../assets/css/notifications.css">
+    <link rel="stylesheet" href="../assets/css/auth.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="auth-header">
+        <h1>Online Shopping System</h1>
+        <p>Login to Your Account</p>
+    </div>
     
-    <form method="POST" action="">
-        <?php echo Helpers::inputField('text', 'username', '', 'Username or Email', true); ?>
-        <?php echo Helpers::inputField('password', 'password', '', 'Password', true); ?>
+    <!-- Login Form -->
+    <div class="auth-container">
+        <h2 class="auth-title">Login</h2>
         
-        <button type="submit" style="width: 100%; padding: 10px; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            Login
-        </button>
-    </form>
-    
-    <div style="margin-top: 15px; text-align: center;">
-        <a href="password-reset.php">Forgot Password?</a>
+        <!-- Error Message (for non-AJAX) -->
+        <?php if (isset($error)): ?>
+            <div class="auth-message error">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- Error Message Container (for AJAX) -->
+        <div id="login-error" class="auth-message error" style="display: none;"></div>
+        
+        <form id="login-form" method="POST">
+            <div class="auth-form">
+                <div class="auth-form-group">
+                    <label for="username" class="auth-label">Username or Email:</label>
+                    <input type="text" id="username" name="username" class="auth-input" 
+                           value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" required>
+                </div>
+                
+                <div class="auth-form-group">
+                    <label for="password" class="auth-label">Password:</label>
+                    <input type="password" id="password" name="password" class="auth-input" required>
+                </div>
+            </div>
+            
+            <!-- Remember Me Checkbox -->
+            <div class="auth-remember">
+                <input type="checkbox" name="remember_me" id="remember_me" value="1">
+                <label for="remember_me">Remember me for 30 days</label>
+            </div>
+            
+            <!-- Hidden fields for AJAX -->
+            <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
+            <input type="hidden" name="ajax_login" value="1">
+            
+            <!-- Submit Button -->
+            <button type="submit" id="login-btn" class="auth-btn">
+                Login
+            </button>
+        </form>
+        
+        <!-- Links -->
+        <div class="auth-links">
+            <p>
+                <a href="password_reset.php" class="auth-link">Forgot Password?</a>
+                <a href="register.php" class="auth-link">Create Account</a>
+            </p>
+        </div>
     </div>
     
-    <div style="margin-top: 15px; text-align: center;">
-        Don't have an account? <a href="register.php">Register here</a>
+    <!-- Footer -->
+    <div class="auth-footer">
+        <p>&copy; <?php echo date('Y'); ?> Online Shopping System. All rights reserved.</p>
     </div>
-</div>
-
-<?php require_once '../includes/footer.php'; ?>
+    
+    <!-- JavaScript Files -->
+    <script src="../assets/js/notifications.js"></script>
+    <script src="../assets/js/login.js"></script>
+</body>
+</html>

@@ -1,25 +1,8 @@
 <?php
-class Database {
-    private $host = 'localhost';
-    private $db_name = 'OnlineShoppingSystem';
-    private $username = 'root';      
-    private $password = '';  
-    public $conn;
+require_once '../lib/base.php';
 
-    public function getConnection() {
-        $this->conn = null;
-        try {
-            $this->conn = new PDO(
-                "mysql:host=" . $this->host . ";dbname=" . $this->db_name, 
-                $this->username, 
-                $this->password
-            );
-            $this->conn->exec("set names utf8");
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch(PDOException $exception) {
-            echo "Connection error: " . $exception->getMessage();
-        }
-        return $this->conn;
-    }
-}
+// Then set up database connection
+$_db = new PDO("mysql:host=localhost;dbname=OnlineShoppingSystem", "root", "");
+$_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$_db->exec("set names utf8");
 ?>
