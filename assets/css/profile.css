@@ -1,0 +1,548 @@
+/* Profile Page Styles */
+.profile-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.profile-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.profile-header h2 {
+    font-size: 32px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.profile-header p {
+    color: #666;
+    font-size: 16px;
+}
+
+/* Success/Error Messages */
+.success-message {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #c3e6cb;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #f5c6cb;
+}
+
+/* Profile Form */
+.profile-form {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-error {
+    color: #dc3545;
+    font-size: 14px;
+    margin-top: 5px;
+    display: block;
+}
+
+/* Photo Upload */
+.photo-upload {
+    margin: 30px 0;
+    text-align: center;
+}
+
+.current-photo .photo-preview {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #f0f0f0;
+    margin-bottom: 15px;
+}
+
+.photo-actions {
+    margin-top: 15px;
+}
+
+/* Form Actions - ALL BUTTONS BLUE (#007bff) */
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    gap: 8px;
+}
+
+.btn i {
+    font-size: 14px;
+}
+
+/* ALL BUTTONS: Blue with darker blue on hover */
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0069d9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Secondary button - Now also blue */
+.btn-secondary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #0069d9;
+    color: white;
+}
+
+/* Outline button - Now solid blue */
+.btn-outline {
+    background: #007bff;
+    color: white;
+    border: 2px solid #007bff;
+}
+
+.btn-outline:hover {
+    background: #0069d9;
+    border-color: #0069d9;
+    color: white;
+}
+
+.btn-loading {
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 20px 30px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+/* Modal Drag & Drop Area */
+.modal-drag-drop-area {
+    border: 2px dashed #ddd;
+    border-radius: 10px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.modal-drag-drop-area.drag-over {
+    border-color: #007bff;
+    background: rgba(0, 123, 255, 0.05);
+}
+
+.drag-drop-content .upload-icon {
+    font-size: 48px;
+    color: #007bff;
+    margin-bottom: 15px;
+}
+
+.drag-drop-content .upload-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.drag-drop-content .upload-subtext {
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.drag-drop-content .file-types {
+    color: #999;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+/* Preview Area */
+.preview-area {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#modal-preview-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border: 2px solid #eee;
+}
+
+.preview-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Modal Actions - ALL buttons blue */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.modal-actions .btn {
+    padding: 10px 20px;
+}
+
+.modal-actions .btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.modal-actions .btn-primary:hover {
+    background: #0069d9;
+}
+
+.modal-actions .btn-outline {
+    background: #007bff;
+    color: white;
+    border: 2px solid #007bff;
+}
+
+.modal-actions .btn-outline:hover {
+    background: #0069d9;
+    color: white;
+    border-color: #0069d9;
+}
+
+/* Verification Card Styles - Card background WHITE, only header black */
+.verification-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-top: 30px;
+    overflow: hidden;
+    border: none;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #444 0%, #222 100%);
+    color: white;
+    padding: 20px 25px;
+    border-bottom: 1px solid #444;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.card-header i {
+    margin-right: 10px;
+    color: #007bff;
+}
+
+.card-body {
+    padding: 25px;
+    background: white;
+    color: #333;
+}
+
+.verification-status {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.alert-success {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: #155724;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.alert-warning {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #856404;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.status-icon {
+    font-size: 24px;
+    margin-right: 15px;
+}
+
+.status-content h6 {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.status-content p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.verification-features {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(0, 123, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 123, 255, 0.1);
+}
+
+.verification-features h6 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.features-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #555;
+}
+
+.features-list li {
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.verification-actions {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+/* Verification buttons - ALL blue */
+.btn-verify {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-verify:hover {
+    background: #0069d9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-verify i {
+    margin-right: 8px;
+}
+
+.btn-info {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-info:hover {
+    background: #0069d9;
+    color: white;
+    text-decoration: none;
+}
+
+.btn-info i {
+    margin-right: 8px;
+}
+
+.verification-tips {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+    color: #666;
+    font-size: 14px;
+}
+
+.verification-tips p {
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+}
+
+.verification-tips i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+    color: #007bff;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .profile-container {
+        padding: 20px 15px;
+    }
+    
+    .profile-header h2 {
+        font-size: 28px;
+    }
+    
+    .profile-form {
+        padding: 20px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .verification-actions {
+        flex-direction: column;
+    }
+    
+    .btn-verify,
+    .btn-info {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .modal-container {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-drag-drop-area {
+        min-height: 200px;
+        padding: 30px 15px;
+    }
+}

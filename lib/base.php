@@ -86,9 +86,8 @@ function csrf_token() {
 }
 
 function validate_csrf($token) {
-    if (!isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
-        die('CSRF token validation failed');
-    }
+    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+
 }
 
 
@@ -171,8 +170,11 @@ function get_file($key) {
 // ============================================================================
 // HTML Helpers
 // ============================================================================
-function encode($value) {
-    return htmlentities($value);
+function encode($string) {
+    if ($string === null) {
+        return '';
+    }
+    return htmlentities($string, ENT_QUOTES, 'UTF-8');
 }
 
 function html_text($key, $attr = '') {
@@ -231,6 +233,20 @@ function err($key) {
 }
 
 // ============================================================================
+// Notification Functions
+// ============================================================================
+function save_notification_and_redirect($message, $type = 'error', $url = null) {
+    show_notification($message, $type);
+    
+    // Force session write before redirect
+    session_write_close();
+    
+    redirect($url);
+}
+
+
+
+// ============================================================================
 // Database Functions
 // ============================================================================
 function is_unique($value, $table, $field) {
@@ -278,6 +294,198 @@ function db() {
 
 function getDatabase() {
     return db();
+}
+
+/**
+ * Remove a query parameter from current URL
+ */
+function remove_query_param($param) {
+    $query = $_GET;
+    unset($query[$param]);
+    $query['page'] = 1; // Reset to page 1
+    return 'users.php?' . http_build_query($query);
+}
+
+/**
+ * Build query string with existing parameters
+ */
+function build_query($new_params = []) {
+    $query = array_merge($_GET, $new_params);
+    return http_build_query($query);
+}
+
+// ============================================================================
+// Drag and Drop 
+// ============================================================================
+
+function is_valid_image($file) {
+    if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+        return false;
+    }
+    
+    // Check MIME type
+    $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $file['tmp_name']);
+    finfo_close($finfo);
+    
+    if (!in_array($mime_type, $allowed_types)) {
+        return false;
+    }
+    
+    // Check file size (max 2MB)
+    if ($file['size'] > 2 * 1024 * 1024) {
+        return false;
+    }
+    
+    // Check if it's actually an image
+    $image_info = @getimagesize($file['tmp_name']);
+    if (!$image_info) {
+        return false;
+    }
+    
+    return true;
+}
+
+
+function save_uploaded_image($file, $target_path, $max_width = 300, $max_height = 300, $quality = 90) {
+    if (!is_valid_image($file)) {
+        return false;
+    }
+    
+    // Create directory if it doesn't exist
+    $dir = dirname($target_path);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    
+    // Try to use SimpleImage class if available
+    if (class_exists('SimpleImage')) {
+        try {
+            $img = new SimpleImage();
+            $img->fromFile($file['tmp_name'])
+                ->thumbnail($max_width, $max_height, 'center')
+                ->toFile($target_path, 'image/jpeg', ['quality' => $quality]);
+            return true;
+        } catch (Exception $e) {
+            error_log("SimpleImage error: " . $e->getMessage());
+            // Fall through to GD
+        }
+    }
+    
+    // Fallback to GD
+    $image_info = getimagesize($file['tmp_name']);
+    $original_image = null;
+    
+    switch($image_info[2]) {
+        case IMAGETYPE_JPEG:
+            $original_image = imagecreatefromjpeg($file['tmp_name']);
+            break;
+        case IMAGETYPE_PNG:
+            $original_image = imagecreatefrompng($file['tmp_name']);
+            // Preserve transparency for PNG
+            imagepalettetotruecolor($original_image);
+            imagealphablending($original_image, true);
+            imagesavealpha($original_image, true);
+            break;
+        case IMAGETYPE_GIF:
+            $original_image = imagecreatefromgif($file['tmp_name']);
+            break;
+        case IMAGETYPE_WEBP:
+            if (function_exists('imagecreatefromwebp')) {
+                $original_image = imagecreatefromwebp($file['tmp_name']);
+            }
+            break;
+    }
+    
+    if (!$original_image) {
+        return false;
+    }
+    
+    // Get original dimensions
+    $orig_width = imagesx($original_image);
+    $orig_height = imagesy($original_image);
+    
+    // Calculate new dimensions
+    $ratio = $orig_width / $orig_height;
+    if ($max_width / $max_height > $ratio) {
+        $new_width = $max_height * $ratio;
+        $new_height = $max_height;
+    } else {
+        $new_width = $max_width;
+        $new_height = $max_width / $ratio;
+    }
+    
+    // Create new image
+    $new_image = imagecreatetruecolor($new_width, $new_height);
+    
+    // Preserve transparency for PNG and GIF
+    if ($image_info[2] == IMAGETYPE_PNG || $image_info[2] == IMAGETYPE_GIF) {
+        imagecolortransparent($new_image, imagecolorallocatealpha($new_image, 0, 0, 0, 127));
+        imagealphablending($new_image, false);
+        imagesavealpha($new_image, true);
+    }
+    
+    // Resize image
+    imagecopyresampled($new_image, $original_image, 0, 0, 0, 0, 
+                      $new_width, $new_height, $orig_width, $orig_height);
+    
+    // Save image
+    $extension = pathinfo($target_path, PATHINFO_EXTENSION);
+    switch(strtolower($extension)) {
+        case 'jpg':
+        case 'jpeg':
+            $result = imagejpeg($new_image, $target_path, $quality);
+            break;
+        case 'png':
+            $result = imagepng($new_image, $target_path, 9);
+            break;
+        case 'gif':
+            $result = imagegif($new_image, $target_path);
+            break;
+        case 'webp':
+            if (function_exists('imagewebp')) {
+                $result = imagewebp($new_image, $target_path, $quality);
+            } else {
+                $result = imagejpeg($new_image, $target_path, $quality);
+            }
+            break;
+        default:
+            $result = imagejpeg($new_image, $target_path, $quality);
+    }
+    
+    // Free memory
+    imagedestroy($original_image);
+    imagedestroy($new_image);
+    
+    return $result;
+}
+
+
+function generate_profile_filename($user_id, $original_name = '') {
+    $extension = 'jpg'; // Default to jpg for consistency
+    if ($original_name) {
+        $ext = pathinfo($original_name, PATHINFO_EXTENSION);
+        if (in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+            $extension = strtolower($ext) == 'jpeg' ? 'jpg' : strtolower($ext);
+        }
+    }
+    
+    $timestamp = time();
+    $random = bin2hex(random_bytes(4));
+    return "profile_{$user_id}_{$timestamp}_{$random}.{$extension}";
+}
+
+function delete_old_photo($filename, $directory) {
+    if (!$filename || $filename == 'avatar.png') {
+        return;
+    }
+    
+    $path = rtrim($directory, '/') . '/' . $filename;
+    if (file_exists($path)) {
+        unlink($path);
+    }
+
 }
 
 ?>

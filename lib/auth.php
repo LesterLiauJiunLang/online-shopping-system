@@ -40,38 +40,7 @@ function auth(...$roles) {
     }
 }
 
-// Add this at the end of your auth.php file (or create a new Auth class file):
 
-class Auth {
-    public function isLoggedIn() {
-        return is_logged_in();
-    }
-    
-    public function isAdmin() {
-        return is_admin();
-    }
-    
-    // You can add more methods as needed
-    public function requireLogin() {
-        require_login();
-    }
-    
-    public function requireAdmin() {
-        require_admin();
-    }
-    
-    public function login($username, $password) {
-        return login($username, $password);
-    }
-    
-    public function logout() {
-        logout();
-    }
-    
-    public function checkRememberToken() {
-        return check_remember_token();
-    }
-}
 
 // ============================================================================
 // Basic Authentication Functions
@@ -262,23 +231,14 @@ function register_user($username, $email, $password, $role = 'member') {
             return "Email already exists.";
         }
 
-        $password_hash = password_hash($password, PASSWORD_DEFAULT); // ADD THIS
-
-
-        // ===== EMAIL VERIFICATION LOGIC =====
-        // For members: generate 6-digit verification code
-        // For admins: auto-verify (no code needed)
-        $email_verified = ($role === 'admin') ? 1 : 0;
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
         
-        if ($role === 'member') {
-            $verification_code = sprintf('%06d', random_int(0, 999999)); // 6-digit code
-            $verification_code_expires = date('Y-m-d H:i:s', strtotime('+10 minutes')); // 10 min expiry
-        } else {
-            $verification_code = null;
-            $verification_code_expires = null;
-        }
+        // For members: NOT verified yet, generate verification code but don't send email yet
+        $email_verified = 0; // NOT verified
+        $verification_code = sprintf('%06d', random_int(0, 999999));
+        $verification_code_expires = date('Y-m-d H:i:s', strtotime('+24 hours')); // 24 hour expiry
         
-        // Insert new user WITH verification code
+        // Insert new user WITH verification code but not verified
         $query = "INSERT INTO users (username, email, password_hash, role, email_verified, verification_code, verification_code_expires) 
                   VALUES (:username, :email, :password_hash, :role, :email_verified, :verification_code, :verification_code_expires)";
 
@@ -288,37 +248,13 @@ function register_user($username, $email, $password, $role = 'member') {
         $stmt->bindParam(':password_hash', $password_hash);
         $stmt->bindParam(':role', $role);
         $stmt->bindParam(':email_verified', $email_verified, PDO::PARAM_INT);
-
-        // Handle NULL values for admin
-        if ($verification_code === null) {
-            $stmt->bindValue(':verification_code', null, PDO::PARAM_NULL);
-        } else {
-            $stmt->bindParam(':verification_code', $verification_code);
-        }
-        
-        if ($verification_code_expires === null) {
-            $stmt->bindValue(':verification_code_expires', null, PDO::PARAM_NULL);
-        } else {
-            $stmt->bindParam(':verification_code_expires', $verification_code_expires);
-        }
+        $stmt->bindParam(':verification_code', $verification_code);
+        $stmt->bindParam(':verification_code_expires', $verification_code_expires);
 
         if ($stmt->execute()) {
-            // Send verification email ONLY for members
-            if ($role === 'member') {
-                // Get the new user ID
-                $user_id = $_db->lastInsertId();
-                
-                // Send verification email with CODE
-                if (send_verification_code_email($email, $username, $verification_code)) {
-                    return "success";
-                } else {
-                    error_log("Verification email failed for user: $email");
-                    return "success_email_failed";
-                }
-            } else {
-                // Admin - no email needed
-                return "success";
-            }
+            // ✅ DO NOT send verification email on registration
+            // Just store the code for later when user chooses to verify
+            return "success";
         } else {
             return "Registration failed. Please try again.";
         }
@@ -328,7 +264,6 @@ function register_user($username, $email, $password, $role = 'member') {
         return "Database error: " . $exception->getMessage();
     }
 }
-
 // ============================================================================
 // Verification Email Function
 // ============================================================================

@@ -47,6 +47,7 @@ if (!$auth) {
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/style.css">
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/auth.css">
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/admin.css">
+    <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/notifications.css">
     <style>
         /* Add minimal header styles here */
         .header {
@@ -99,7 +100,9 @@ if (!$auth) {
     </style>
 </head>
 <body>
+    
     <div class="header">
+<<<<<<< Updated upstream
         <div class="logo">
             <a href="<?php echo $base_url; ?>/public/index.php">🛒 Online Shopping</a>
         </div>

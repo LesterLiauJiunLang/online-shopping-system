@@ -1,7 +1,5 @@
 <?php
-require_once '../includes/header.php';
-// Use the same pattern as practical class
-// REMOVED: session_start() - already in base.php
+// At the top of profile.php
 require_once '../lib/base.php';      // includes your base functions
 require_once '../lib/auth.php';      // includes auth functions
 
@@ -109,52 +107,17 @@ if (is_post()) {
                     }
                 }
                 
-                // Save new photo
-                $name = "profile_{$uid}.jpg";
+                // Use the new function from base.php
+                $name = generate_profile_filename($uid, $f['name']);
                 $path = root("uploads/profile/$name");
                 
-                // Create directory if it doesn't exist
-                $dir = dirname($path);
-                if (!is_dir($dir)) {
-                    mkdir($dir, 0755, true);
-                }
-                
-                // Process image with SimpleImage
-                // Check if SimpleImage class exists, if not use GD functions
-                if (class_exists('SimpleImage')) {
-                    $img = new SimpleImage();
-                    $img->fromFile($f['tmp_name'])
-                        ->thumbnail(300, 300, 'center')
-                        ->toFile($path, 'image/jpeg', ['quality' => 90]);
+                // Save the uploaded image
+                if (save_uploaded_image($f, $path)) {
+                    $photo = $name;
+                    $_SESSION['photo'] = $photo;
                 } else {
-                    // Fallback to GD functions
-                    $image_info = getimagesize($f['tmp_name']);
-                    $original_image = null;
-                    
-                    switch($image_info[2]) {
-                        case IMAGETYPE_JPEG:
-                            $original_image = imagecreatefromjpeg($f['tmp_name']);
-                            break;
-                        case IMAGETYPE_PNG:
-                            $original_image = imagecreatefrompng($f['tmp_name']);
-                            break;
-                        case IMAGETYPE_GIF:
-                            $original_image = imagecreatefromgif($f['tmp_name']);
-                            break;
-                    }
-                    
-                    if ($original_image) {
-                        $thumb = imagecreatetruecolor(300, 300);
-                        imagecopyresampled($thumb, $original_image, 0, 0, 0, 0, 300, 300, 
-                                          imagesx($original_image), imagesy($original_image));
-                        imagejpeg($thumb, $path, 90);
-                        imagedestroy($original_image);
-                        imagedestroy($thumb);
-                    }
+                    throw new Exception("Failed to save uploaded image.");
                 }
-                    
-                $photo = $name;
-                $_SESSION['photo'] = $photo;
             }
             
             // (2) Update user (username, email, profile_photo)
@@ -171,7 +134,7 @@ if (is_post()) {
 
             $_db->commit();
             
-            temp('info', 'Profile updated');
+            temp('info', 'Profile updated successfully!');
             redirect('profile.php');
             
         } catch (Exception $e) {
@@ -182,107 +145,196 @@ if (is_post()) {
 }
 
 // ----------------------------------------------------------------------------
+// Get verification status for display
+// ----------------------------------------------------------------------------
+try {
+    $stmt = $_db->prepare('SELECT email_verified, verification_code FROM users WHERE user_id = ?');
+    $stmt->execute([$uid]);
+    $verification = $stmt->fetch();
+    $is_verified = $verification['email_verified'] ?? 0;
+    $has_code = !empty($verification['verification_code'] ?? '');
+} catch (Exception $e) {
+    $is_verified = 0;
+    $has_code = false;
+}
 
+// ----------------------------------------------------------------------------
+// Set page title
 $_title = 'My Profile';
 ?>
 
-<h2>My Profile</h2>
+<?php include '../includes/header.php'; ?>
 
-<?php 
-$message = temp('info');
-if ($message) {
-    echo '<div class="success-message">' . encode($message) . '</div>';
-}
-$error = temp('error');
-if ($error) {
-    echo '<div class="error-message">' . encode($error) . '</div>';
-}
-?>
+<link rel="stylesheet" href="../assets/css/profile.css?v=<?php echo time(); ?>">
 
-<form method="post" class="form" enctype="multipart/form-data">
-    <label for="username">Username</label>
-    <?php html_text('username', 'maxlength="50" required'); ?>
-    <?php err('username'); ?>
 
-    <label for="email">Email</label>
-    <?php html_text('email', 'maxlength="100" required'); ?>
-    <?php err('email'); ?>
-
-    <label for="photo">Profile Photo</label>
-    <label class="upload" tabindex="0">
-        <?php html_file('photo', 'image/*', 'hidden'); ?>
-        <img src="<?= base("uploads/profile/" . ($profile_photo ?? 'avatar.png')) ?>" width="150" height="150" style="border-radius: 50%; object-fit: cover;">
-    </label>
-    <?php err('photo'); ?>
-
-    <section>
-        <button name="btn_update">Update Profile</button>
-        <a href="password_reset.php" class="btn btn-secondary">Change Password</a>
-        <a href="dashboard.php" class="btn btn-outline">Back to Dashboard</a>
-    </section>
-</form>
-
-<!-- Email Verification Section -->
-<div class="card mt-4">
-    <div class="card-header bg-light">
-        <h5 class="mb-0">📧 Email Verification Status</h5>
+<div class="profile-container">
+    <div class="profile-header">
+        <h2>My Profile</h2>
+        <p>Manage your account information and preferences</p>
     </div>
-    <div class="card-body">
-        <?php
-        // Get verification status
-        $stmt = $_db->prepare('SELECT email_verified, verification_code FROM users WHERE user_id = ?');
-        $stmt->execute([$uid]);
-        $verification = $stmt->fetch();
-        $is_verified = $verification['email_verified'] ?? 0;
-        $has_token = !empty($verification['verification_token']);
-        ?>
-        
-        <?php if ($is_verified): ?>
-            <div class="alert alert-success d-flex align-items-center">
-                <span class="me-3" style="font-size: 24px;">✅</span>
-                <div>
-                    <h6 class="alert-heading mb-1">Email Verified</h6>
-                    <p class="mb-0">Your email <strong><?php echo htmlspecialchars($email); ?></strong> is verified.</p>
-                </div>
-            </div>
-        <?php else: ?>
-            <div class="alert alert-warning d-flex align-items-center">
-                <span class="me-3" style="font-size: 24px;">⚠️</span>
-                <div>
-                    <h6 class="alert-heading mb-1">Email Not Verified</h6>
-                    <p class="mb-0">
-                        Your email <strong><?php echo htmlspecialchars($email); ?></strong> is not verified.
-                        You need to verify your email to access all features.
-                    </p>
-                </div>
+    
+    <?php 
+    $message = temp('info');
+    if ($message) {
+        echo '<div class="success-message">' . htmlspecialchars($message) . '</div>';
+    }
+    $error = temp('error');
+    if ($error) {
+        echo '<div class="error-message">' . htmlspecialchars($error) . '</div>';
+    }
+    ?>
+    
+    <!-- Profile Update Form -->
+    <div class="profile-form">
+        <form method="post" enctype="multipart/form-data" id="profile-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" 
+                       value="<?php echo htmlspecialchars($username ?? ''); ?>" 
+                       maxlength="50" required>
+                <span class="form-error"><?php echo $_err['username'] ?? ''; ?></span>
             </div>
             
-            <div class="mt-3">
-                <h6>Features requiring verification:</h6>
-                <ul class="mb-3">
-                    <li>Complete purchases (checkout)</li>
-                    <li>View order history</li>
-                    <li>Write product reviews</li>
-                    <li>Save shipping addresses</li>
-                </ul>
-                
-                <div class="d-flex gap-2">
-                    <a href="verify_email_code.php" class="btn btn-primary">
-                        📧 Verify Email Now
-                    </a>
-                    <a href="verify_required.php" class="btn btn-outline-secondary">
-                        <i class="fas fa-info-circle me-1"></i> Learn More
-                    </a>
-                </div>
-                
-                <div class="mt-3 small text-muted">
-                    <p class="mb-1"><i class="fas fa-exclamation-triangle me-1"></i> Check your spam folder</p>
-                    <p class="mb-0"><i class="fas fa-clock me-1"></i> Links expire in 24 hours</p>
-                </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" 
+                       value="<?php echo htmlspecialchars($email ?? ''); ?>" 
+                       maxlength="100" required>
+                <span class="form-error"><?php echo $_err['email'] ?? ''; ?></span>
             </div>
-        <?php endif; ?>
+            
+            <!-- Profile Picture with Button to Open Modal -->
+            <div class="photo-upload">
+                <div class="current-photo">
+                    <img src="<?php echo base("uploads/profile/" . ($profile_photo ?? 'avatar.png')); ?>" 
+                         alt="Current Profile Photo" class="photo-preview" id="current-photo-preview">
+                    <div class="photo-actions">
+                        <button type="button" class="btn btn-secondary" id="change-photo-btn">
+                            <i class="fas fa-camera"></i> Change Profile Picture
+                        </button>
+                    </div>
+                </div>
+                <!-- Hidden file input for the form -->
+                <input type="file" id="photo" name="photo" accept="image/*" style="display: none;">
+                <span class="form-error"><?php echo $_err['photo'] ?? ''; ?></span>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" name="btn_update" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+                <a href="password_reset.php" class="btn btn-secondary">
+                    <i class="fas fa-key"></i> Change Password
+                </a>
+                <a href="dashboard.php" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Email Verification Section -->
+    <div class="verification-card">
+        <div class="card-header">
+            <h5><i class="fas fa-envelope"></i> Email Verification Status</h5>
+        </div>
+        <div class="card-body">
+            <?php if ($is_verified): ?>
+                <div class="verification-status alert-success">
+                    <div class="status-icon">✅</div>
+                    <div class="status-content">
+                        <h6>Email Verified</h6>
+                        <p>Your email <strong><?php echo htmlspecialchars($email); ?></strong> is verified and ready to use.</p>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="verification-status alert-warning">
+                    <div class="status-icon">⚠️</div>
+                    <div class="status-content">
+                        <h6>Email Not Verified</h6>
+                        <p>
+                            Your email <strong><?php echo htmlspecialchars($email); ?></strong> is not verified.
+                            You need to verify your email to access all features.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="verification-features">
+                    <h6>Features requiring verification:</h6>
+                    <ul class="features-list">
+                        <li>Complete purchases (checkout)</li>
+                        <li>View order history</li>
+                        <li>Write product reviews</li>
+                        <li>Save shipping addresses</li>
+                        <li>Receive order notifications</li>
+                    </ul>
+                </div>
+                
+                <div class="verification-actions">
+                    <!-- Single button that goes to verification page - email will be sent automatically -->
+                    <a href="verify_email_code.php" class="btn-verify">
+                        <i class="fas fa-envelope"></i> Verify Email Now
+                    </a>
+                    
+                    <a href="verify_required.php" class="btn-info">
+                        <i class="fas fa-info-circle"></i> Learn More
+                    </a>
+                </div>
+                
+                <div class="verification-tips">
+                    <p><i class="fas fa-exclamation-triangle"></i> Check your spam folder if you don't see the email</p>
+                    <p><i class="fas fa-clock"></i> Verification codes expire in 10 minutes</p>
+                    <p><i class="fas fa-redo"></i> You can request a new code on the verification page</p>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 
-<?php
-include '../includes/footer.php';
+<!-- Profile Picture Upload Modal (Popup) -->
+<div class="modal-overlay" id="photo-modal" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>Upload Profile Picture</h3>
+            <button type="button" class="close-modal" id="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <!-- Drag & Drop Area -->
+            <div class="modal-drag-drop-area" id="modal-drop-zone">
+                <div class="drag-drop-content">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="upload-text">Drag & Drop your image here</div>
+                    <div class="upload-subtext">or click to browse</div>
+                    <div class="file-types">Supported: JPG, PNG, GIF (Max 2MB)</div>
+                </div>
+                
+                <!-- Hidden file input for the modal -->
+                <input type="file" id="modal-file-input" accept="image/*" style="display: none;">
+                
+                <!-- Preview area -->
+                <div class="preview-area" id="modal-preview" style="display: none;">
+                    <img src="" alt="Preview" id="modal-preview-image">
+                    <div class="preview-info">
+                        <span id="modal-file-name"></span>
+                        <span id="modal-file-size"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" id="cancel-upload">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-upload" disabled>
+                    <i class="fas fa-check"></i> Use This Photo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="../assets/js/profile.js"></script>
+
+<?php include '../includes/footer.php'; ?>

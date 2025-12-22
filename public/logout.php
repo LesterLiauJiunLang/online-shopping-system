@@ -22,4 +22,6 @@ if (isset($_COOKIE['remember_user'])) {
 // Redirect to index.php with correct path
 header("Location: /online-shopping-system/public/index.php");
 exit();
+
+
 ?>
