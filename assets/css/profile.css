@@ -110,10 +110,10 @@
 }
 
 .btn {
-    padding: 12px 24px;
+    padding: 10px 20px;
     border-radius: 6px;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
     transition: all 0.3s;
     text-decoration: none;
@@ -125,7 +125,7 @@
 }
 
 .btn i {
-    font-size: 14px;
+    font-size: 13px;
 }
 
 /* ALL BUTTONS: Blue with darker blue on hover */
@@ -300,7 +300,8 @@
 }
 
 .modal-actions .btn {
-    padding: 10px 20px;
+    padding: 8px 16px;
+    font-size: 14px;
 }
 
 .modal-actions .btn-primary {
@@ -421,61 +422,41 @@
 .verification-actions {
     display: flex;
     gap: 10px;
-    margin: 20px 0;
+    margin: 15px 0;
     flex-wrap: wrap;
 }
 
-/* Verification buttons - ALL blue */
-.btn-verify {
+/* COMPACT Verification buttons - FIXED: Now much shorter in height */
+.btn-verify, .btn-info {
     display: inline-flex;
     align-items: center;
-    padding: 10px 20px;
+    justify-content: center;
+    padding: 4px 12px; /* Reduced vertical padding */
     background: #007bff;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     text-decoration: none;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s;
+    line-height: 1.2; /* Tighter line spacing */
+    height: auto;
+    min-height: 28px; /* Small minimum height */
 }
 
-.btn-verify:hover {
+.btn-verify:hover, .btn-info:hover {
     background: #0069d9;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
     color: white;
     text-decoration: none;
 }
 
-.btn-verify i {
-    margin-right: 8px;
-}
-
-.btn-info {
-    display: inline-flex;
-    align-items: center;
-    padding: 10px 20px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 15px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.btn-info:hover {
-    background: #0069d9;
-    color: white;
-    text-decoration: none;
-}
-
-.btn-info i {
-    margin-right: 8px;
+.btn-verify i, .btn-info i {
+    margin-right: 6px;
+    font-size: 13px;
 }
 
 .verification-tips {
@@ -520,16 +501,22 @@
     .form-actions .btn {
         width: 100%;
         justify-content: center;
+        padding: 10px 15px;
+        font-size: 14px;
     }
     
     .verification-actions {
         flex-direction: column;
     }
     
+    /* Mobile: Keep buttons slightly larger for touch targets */
     .btn-verify,
     .btn-info {
         width: 100%;
         justify-content: center;
+        padding: 6px 15px;
+        font-size: 14px;
+        min-height: 36px; /* Taller on mobile for touch */
     }
     
     .modal-container {
