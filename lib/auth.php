@@ -713,5 +713,25 @@ function require_verified_email() {
     }
 }
 
+function log_user_activity($user_id, $activity_type, $description = '', $ip_address = null) {
+    global $_db;
+    
+    if (!$ip_address) {
+        $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+    }
+    
+    try {
+        $stmt = $_db->prepare('
+            INSERT INTO user_activity (user_id, activity_type, description, ip_address, created_at)
+            VALUES (?, ?, ?, ?, NOW())
+        ');
+        $stmt->execute([$user_id, $activity_type, $description, $ip_address]);
+        return true;
+    } catch (Exception $e) {
+        error_log("Failed to log user activity: " . $e->getMessage());
+        return false;
+    }
+}
+
 ?>
 

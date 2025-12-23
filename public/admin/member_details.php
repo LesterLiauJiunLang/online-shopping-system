@@ -21,6 +21,7 @@ if (!$member_id) {
 // Initialize variables
 $member = null;
 $orders = [];
+$activities = [];
 
 // Handle member actions
 if (is_post()) {
@@ -211,6 +212,17 @@ try {
     $orders_stmt->execute([$member_id]);
     $orders = $orders_stmt->fetchAll();
     
+    // ADDED: Fetch member's activity history
+    $activities_stmt = $_db->prepare("
+        SELECT activity_type, description, ip_address, created_at 
+        FROM user_activity 
+        WHERE user_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT 20
+    ");
+    $activities_stmt->execute([$member_id]);
+    $activities = $activities_stmt->fetchAll();
+    
 } catch (PDOException $e) {
     $_SESSION['notification'] = [
         'message' => "Database error: " . $e->getMessage(),
@@ -230,6 +242,95 @@ $csrf_token = csrf_token();
     <?php require_once '../../includes/header.php'; ?>
     <link rel="stylesheet" href="../../assets/css/notifications.css">
     <link rel="stylesheet" href="../../assets/css/users.css">
+    <style>
+        /* ADDED: Activity Timeline Styles */
+        .activity-timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-top: 20px;
+        }
+        
+        .activity-item {
+            position: relative;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .activity-dot {
+            position: absolute;
+            left: -40px;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px;
+        }
+        
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .activity-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .activity-ip {
+            margin-left: 10px;
+            padding: 2px 8px;
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .activity-time {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .activity-description {
+            margin: 0;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .empty-activity {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .empty-activity i {
+            font-size: 48px;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+        
+        /* Activity type colors */
+        .activity-login .activity-dot { background: #28a745; box-shadow: 0 0 0 3px #28a745; }
+        .activity-logout .activity-dot { background: #6c757d; box-shadow: 0 0 0 3px #6c757d; }
+        .activity-profile_update .activity-dot { background: #007bff; box-shadow: 0 0 0 3px #007bff; }
+        .activity-order_placed .activity-dot { background: #ffc107; box-shadow: 0 0 0 3px #ffc107; }
+        .activity-product_view .activity-dot { background: #17a2b8; box-shadow: 0 0 0 3px #17a2b8; }
+    </style>
 </head>
 <body>
     <div class="ajax-loading" id="ajaxLoading">
@@ -342,6 +443,11 @@ $csrf_token = csrf_token();
                     <button class="tab-btn" data-tab="orders">
                         <i class="fas fa-shopping-cart"></i>
                         <span>Orders (<?php echo count($orders); ?>)</span>
+                    </button>
+                    <!-- ADDED: Activity Tab Button -->
+                    <button class="tab-btn" data-tab="activity">
+                        <i class="fas fa-history"></i>
+                        <span>Activity (<?php echo count($activities); ?>)</span>
                     </button>
                     <button class="tab-btn" data-tab="actions">
                         <i class="fas fa-tools"></i>
@@ -474,6 +580,55 @@ $csrf_token = csrf_token();
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- ADDED: Activity Tab -->
+                <div class="tab-content" id="activity-tab">
+                    <?php if (empty($activities)): ?>
+                        <div class="empty-activity">
+                            <i class="fas fa-history"></i>
+                            <h3>No Activity Found</h3>
+                            <p>This member hasn't performed any actions yet.</p>
+                        </div>
+                    <?php else: ?>
+                        <!-- Activity Timeline -->
+                        <div class="activity-timeline">
+                            <?php foreach ($activities as $activity): ?>
+                            <div class="activity-item activity-<?php echo $activity['activity_type']; ?>">
+                                <div class="activity-dot"></div>
+                                <div class="activity-header">
+                                    <div>
+                                        <span class="activity-title">
+                                            <i class="fas fa-<?php 
+                                                switch(strtolower($activity['activity_type'])) {
+                                                    case 'login': echo 'sign-in-alt'; break;
+                                                    case 'logout': echo 'sign-out-alt'; break;
+                                                    case 'profile_update': echo 'user-edit'; break;
+                                                    case 'order_placed': echo 'shopping-cart'; break;
+                                                    case 'product_view': echo 'eye'; break;
+                                                    default: echo 'circle';
+                                                }
+                                            ?>"></i>
+                                            <?php echo ucfirst(str_replace('_', ' ', $activity['activity_type'])); ?>
+                                            <?php if (!empty($activity['ip_address'])): ?>
+                                            <span class="activity-ip"><?php echo $activity['ip_address']; ?></span>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                    <span class="activity-time">
+                                        <?php echo date('M j, Y g:i A', strtotime($activity['created_at'])); ?>
+                                    </span>
+                                </div>
+                                
+                                <?php if (!empty($activity['description'])): ?>
+                                <p class="activity-description">
+                                    <?php echo htmlspecialchars($activity['description']); ?>
+                                </p>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -632,9 +787,6 @@ $csrf_token = csrf_token();
                     if (loadingOverlay) {
                         loadingOverlay.style.display = 'flex';
                     }
-                    
-                    // The form will submit normally and redirect back
-                    // The loading overlay will be hidden when page reloads
                 });
             });
         });
