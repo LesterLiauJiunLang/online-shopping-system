@@ -72,6 +72,24 @@ if (!$auth) {
                 <?php if ($auth->isAdmin()): ?>
                     <a href="admin/members.php">Manage Members</a>
                 <?php endif; ?>
+                <!-- Cart link for logged-in members -->
+                <a href="cart.php">
+                🛒 Cart 
+                <?php 
+                // Check if cart class exists and user is logged in
+                if (isset($_SESSION['user_id']) && class_exists('Cart')) {
+                    // Assuming you have a Cart class with getCartItemCount method
+                    $cart_count = $cart->getCartItemCount($_SESSION['user_id']);
+                    if ($cart_count > 0) {
+                        echo '<span class="cart-count">(' . $cart_count . ')</span>';
+                    }
+                } elseif (isset($_SESSION['user_id'])) {
+                    // Fallback if Cart class doesn't exist
+                    // You might want to implement a database query here
+                    // or leave it without count for now
+                }
+                ?>
+                </a>
                 <a href="logout.php">Logout</a>
             <?php else: ?>
                 <a href="login.php">Login</a>

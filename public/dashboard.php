@@ -229,8 +229,8 @@ if ($isAdmin) {
         <div class="dashboard-actions">
             <h3>Quick Links</h3>
             <div class="action-buttons">
-                <a href="products.php" class="btn btn-primary">Continue Shopping</a>
-                <a href="cart.php" class="btn btn-secondary">View Cart</a>
+                <a href="members/products.php" class="btn btn-primary">Continue Shopping</a>
+                <a href="members/cart.php" class="btn btn-secondary">View Cart</a>
                 <a href="profile.php" class="btn btn-success">Edit Profile</a>
             </div>
         </div>
