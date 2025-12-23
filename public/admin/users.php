@@ -267,11 +267,12 @@ $csrf_token = csrf_token();
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?php echo $csrf_token; ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Member Management - Admin Panel</title>
     <?php require_once '../../includes/header.php'; ?>
     <link rel="stylesheet" href="../../assets/css/notifications.css">
-    <link rel="stylesheet" href="../../assets/css/admin/users.css">
+    <link rel="stylesheet" href="../../assets/css/users.css">
     <script src="../../assets/js/notifications.js"></script>
 </head>
 <body>
@@ -726,10 +727,121 @@ $csrf_token = csrf_token();
 
     <?php require_once '../../includes/footer.php'; ?>
     
-    <script src="../../assets/js/admin/users.js"></script>
+    <script src="../../assets/js/users.js"></script>
     <script>
-    // Pass PHP variables to JavaScript
-    const currentCsrfToken = '<?php echo $csrf_token; ?>';
+    // Override the existing users.js functionality with a simpler version
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Users page loaded');
+        
+        // Debug: Log all AJAX buttons found
+        const ajaxButtons = document.querySelectorAll('.ajax-action-btn');
+        console.log('Found', ajaxButtons.length, 'AJAX buttons');
+        
+        // Add direct click event listeners to all AJAX buttons
+        ajaxButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const action = this.getAttribute('data-action');
+                const userId = this.getAttribute('data-user-id');
+                
+                console.log('Button clicked:', action, 'for user:', userId);
+                
+                // Get CSRF token from meta tag
+                const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+                
+                console.log('CSRF token:', csrfToken ? 'Found' : 'Not found');
+                
+                if (!action || !userId) {
+                    alert('Missing action or user ID');
+                    return;
+                }
+                
+                if (!csrfToken) {
+                    alert('Security token missing. Please refresh the page.');
+                    return;
+                }
+                
+                // Confirm action
+                let confirmMessage = '';
+                switch(action) {
+                    case 'activate':
+                        confirmMessage = 'Are you sure you want to activate this member\'s account?';
+                        break;
+                    case 'deactivate':
+                        confirmMessage = 'Are you sure you want to deactivate this member\'s account?';
+                        break;
+                    case 'delete':
+                        confirmMessage = 'WARNING: This will permanently delete the member. This action cannot be undone!\n\nAre you absolutely sure?';
+                        break;
+                    case 'resend_verification':
+                        confirmMessage = 'Resend verification email to this member?';
+                        break;
+                    default:
+                        confirmMessage = 'Are you sure?';
+                }
+                
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+                
+                // Show loading
+                const ajaxLoading = document.getElementById('ajaxLoading');
+                if (ajaxLoading) {
+                    ajaxLoading.style.display = 'flex';
+                }
+                
+                // Disable button
+                this.disabled = true;
+                const originalHTML = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Processing...</span>';
+                
+                // Send AJAX request
+                const formData = new FormData();
+                formData.append('ajax_action', action);
+                formData.append('user_id', userId);
+                formData.append('csrf_token', csrfToken);
+                
+                console.log('Sending AJAX request to users.php');
+                
+                fetch('users.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Response received:', data);
+                    
+                    // Show result
+                    if (data.success) {
+                        alert(data.message);
+                        // Reload the page to see changes
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Error: ' + data.message);
+                        this.disabled = false;
+                        this.innerHTML = originalHTML;
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    alert('An error occurred: ' + error.message);
+                    this.disabled = false;
+                    this.innerHTML = originalHTML;
+                })
+                .finally(() => {
+                    // Hide loading
+                    if (ajaxLoading) {
+                        ajaxLoading.style.display = 'none';
+                    }
+                });
+            });
+        });
+    });
     </script>
 </body>
 </html>

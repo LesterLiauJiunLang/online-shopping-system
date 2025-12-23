@@ -58,8 +58,17 @@ function req($key, $value = null) {
     return is_array($value) ? array_map('trim', $value) : trim($value);
 }
 
-function redirect($url = null) {
-    $url ??= $_SERVER['REQUEST_URI'];
+function redirect($url, $permanent = false) {
+    // If headers have already been sent, use JavaScript redirect
+    if (headers_sent()) {
+        echo "<script>window.location.href = '$url';</script>";
+        exit();
+    }
+    
+    // Otherwise use PHP header redirect
+    if ($permanent) {
+        header('HTTP/1.1 301 Moved Permanently');
+    }
     header("Location: $url");
     exit();
 }
