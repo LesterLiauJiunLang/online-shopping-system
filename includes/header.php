@@ -4,10 +4,16 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Debug: Check session variables
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Set base URL for consistent navigation
+$base_url = '/online-shopping-system';
+
 // Check if the auth library files exist - if not, use fallback
 $authLibPath = __DIR__ . '/../lib/auth.php';
 $helpersLibPath = __DIR__ . '/../lib/helpers.php';
-$base_url = 'http://' . $_SERVER['HTTP_HOST'] . '/online-shopping-system-product/';
 
 // Initialize auth variable
 $auth = null;
@@ -33,17 +39,49 @@ if (!$auth) {
     }
     $auth = new SimpleAuth();
 }
+
+// Get user's profile photo from session
+$profile_photo = $_SESSION['photo'] ?? 'avatar.png';
+
+// FIXED: Use the same path structure as your profile page
+$fallback_url = $base_url . '/public/assets/images/avatar.png';
+
+// Check multiple possible locations for the profile photo
+if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
+    // Option 1: Check in the uploads directory (absolute path like profile page)
+    $uploads_dir_abs = $_SERVER['DOCUMENT_ROOT'] . '/uploads/profile/';
+    $uploads_file_abs = $uploads_dir_abs . $profile_photo;
+    
+    // Option 2: Check in the project's uploads directory
+    $uploads_dir_project = $_SERVER['DOCUMENT_ROOT'] . $base_url . '/public/uploads/profile/';
+    $uploads_file_project = $uploads_dir_project . $profile_photo;
+    
+    // Choose the correct URL based on where the file actually is
+    if (file_exists($uploads_file_abs)) {
+        // File is in absolute uploads path (like your profile page shows)
+        $img_url = '/uploads/profile/' . htmlspecialchars($profile_photo);
+    } elseif (file_exists($uploads_file_project)) {
+        // File is in project uploads path
+        $img_url = $base_url . '/public/uploads/profile/' . htmlspecialchars($profile_photo);
+    } else {
+        // File not found, use fallback
+        $img_url = $fallback_url;
+    }
+} else {
+    $img_url = $fallback_url;
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Only include your existing auth.css --> 
     <title><?php echo isset($page_title) ? $page_title : 'Online Shopping System'; ?></title>
-    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/style.css">
-    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/auth.css">
-    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/admin.css">
+    <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/auth.css">
+    <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/admin.css">
+    <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/notifications.css">
     <style>
         /* Add minimal header styles here */
         .header {
@@ -51,49 +89,130 @@ if (!$auth) {
             color: white;
             padding: 15px;
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .header a {
+        .logo {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .logo a {
             color: white;
-            margin: 0 10px;
+            text-decoration: none;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .nav-links a:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .nav-links .logout-btn {
+            background-color: #ff4757;
+        }
+        .nav-links .logout-btn:hover {
+            background-color: #ff3742;
+        }
+        .welcome {
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+        .admin-menu {
+            display: flex;
+            gap: 10px;
+            margin-right: 10px;
+        }
+        /* Profile Picture Styles - UPDATED */
+        .profile-pic-link {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        .profile-pic-link:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            text-decoration: none;
+        }
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        /* Optional: Add a tooltip for the profile picture */
+        .profile-pic-link[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 45px;
+            margin-left: -20px;
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
+    
     <div class="header">
         <div class="logo">
-            <strong>Online Shopping</strong>
+            <a href="<?php echo $base_url; ?>/public/index.php">🛒 Online Shopping</a>
         </div>
         <div class="nav-links">
             <?php if ($auth->isLoggedIn()): ?>
-                <span class="welcome">
-                    Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?> 
-                    (<?php echo htmlspecialchars($_SESSION['role'] ?? 'member'); ?>)
-                </span>
-                <?php if ($auth->isAdmin()): ?>
-                    <a href="admin/members.php">Manage Members</a>
-                <?php endif; ?>
-                <!-- Cart link for logged-in members -->
-                <a href="cart.php">
-                🛒 Cart 
-                <?php 
-                // Check if cart class exists and user is logged in
-                if (isset($_SESSION['user_id']) && class_exists('Cart')) {
-                    // Assuming you have a Cart class with getCartItemCount method
-                    $cart_count = $cart->getCartItemCount($_SESSION['user_id']);
-                    if ($cart_count > 0) {
-                        echo '<span class="cart-count">(' . $cart_count . ')</span>';
-                    }
-                } elseif (isset($_SESSION['user_id'])) {
-                    // Fallback if Cart class doesn't exist
-                    // You might want to implement a database query here
-                    // or leave it without count for now
-                }
-                ?>
-                </a>
-                <a href="logout.php">Logout</a>
+                <div class="user-menu">
+                    <!-- Profile Picture ONLY (no text) -->
+                    <a href="<?php echo $base_url; ?>/public/profile.php" class="profile-pic-link" title="Go to Profile">
+                        <img src="<?php echo $img_url; ?>" 
+                             alt="Profile Picture" 
+                             class="profile-pic"
+                             onerror="this.onerror=null; this.src='<?php echo $fallback_url; ?>';">
+                    </a>
+                    
+                    <span class="welcome">
+                        Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>
+                    </span>
+                    
+                    <?php if ($auth->isAdmin()): ?>
+                        <div class="admin-menu">
+                            <a href="<?php echo $base_url; ?>/public/admin/products.php">Products</a>
+                            <a href="<?php echo $base_url; ?>/public/admin/product_add.php">Add Product</a>
+                            <a href="<?php echo $base_url; ?>/public/admin/orders.php">Orders</a>
+                            <a href="<?php echo $base_url; ?>/public/admin/categories.php">Categories</a>
+                            <a href="<?php echo $base_url; ?>/public/admin/users.php">Users</a>
+                        </div>
+                    <?php else: ?>
+                        <a href="<?php echo $base_url; ?>/public/dashboard.php">Dashboard</a>
+                        <a href="<?php echo $base_url; ?>/public/products.php">Shop</a>
+                        <a href="<?php echo $base_url; ?>/public/cart.php">Cart</a>
+                    <?php endif; ?>
+                    
+                    <a href="<?php echo $base_url; ?>/public/logout.php" class="logout-btn">Logout</a>
+                </div>
             <?php else: ?>
-                <a href="login.php">Login</a>
-                <a href="register.php">Register</a>
+                <a href="<?php echo $base_url; ?>/public/index.php">Home</a>
+                <a href="<?php echo $base_url; ?>/public/products.php">Products</a>
+                <a href="<?php echo $base_url; ?>/public/login.php">Login</a>
+                <a href="<?php echo $base_url; ?>/public/register.php">Register</a>
             <?php endif; ?>
         </div>
     </div>

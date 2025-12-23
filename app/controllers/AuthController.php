@@ -3,33 +3,44 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../../lib/base.php';
 
 class AuthController {
     private $user;
 
-    public function __construct() {
-        $this->user = new User();
+public function __construct() {
+        global $_db;  // Use existing connection from base.php
+        require_once __DIR__ . '/../../app/models/UserModel.php';
+        $this->user = new User($_db);
     }
 
-    public function login($value, $password) {
-        $user = $this->user->findByEmailOrUsername($value);
+    public function login($value, $password) {  
+    $user = $this->user->findByEmailOrUsername($value);
 
-        if (!$user) {
-            return "Account not found.";
-        }
-
-        if (!password_verify($password, $user['password_hash'])) {
-            return "Invalid password.";
-        }
-
-        $_SESSION['user_id'] = $user['user_id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
-        $_SESSION['logged_in'] = true;
-
-        return "success";
+    if (!$user) {
+        return "Account not found.";
     }
+
+    if (!password_verify($password, $user['password_hash'])) {
+        return "Invalid password.";
+    }
+
+    // Set old system variables
+    $_SESSION['user_id'] = $user['user_id'];
+    $_SESSION['username'] = $user['username'];
+    $_SESSION['role'] = $user['role'];
+    $_SESSION['logged_in'] = true; 
+
+    // ALSO set new system variables (Practical 7 style)
+    $_SESSION['user'] = [
+        'id' => $user['user_id'],
+        'email' => $user['email'],
+        'name' => $user['username'],
+        'role' => $user['role']
+    ];
+
+    return "success";
+}
 
     public function register($username, $email, $password) {
     if ($this->user->emailExists($email)) {

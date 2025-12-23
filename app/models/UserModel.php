@@ -5,10 +5,35 @@ class User {
     private $conn;
 
     public function __construct($conn = null) {
-        if ($conn === null) {
-            $this->conn = Database::connect();
-        } else {
-            $this->conn = $conn;
+    if ($conn === null) {
+        global $_db;  // Use existing connection
+        $this->conn = $_db;
+    } else {
+        $this->conn = $conn;
+    }
+}
+
+    // Remove the updateUser method if it's only used for profile editing
+
+    public function getUserByEmail($email) {
+        try {
+            $stmt = $this->conn->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Get user by email error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getUserByUsername($username) {
+        try {
+            $stmt = $this->conn->prepare("SELECT * FROM users WHERE username = ?");
+            $stmt->execute([$username]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Get user by username error: " . $e->getMessage());
+            return false;
         }
     }
 

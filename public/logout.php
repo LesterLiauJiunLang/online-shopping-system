@@ -19,7 +19,9 @@ if (isset($_COOKIE['remember_user'])) {
     setcookie('remember_user', '', time() - 3600, "/");
 }
 
-// Redirect to index.php
-header("Location: index.php");
+// Redirect to index.php with correct path
+header("Location: /online-shopping-system/public/index.php");
 exit();
+
+
 ?>

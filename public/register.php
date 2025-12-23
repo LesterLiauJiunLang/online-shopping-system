@@ -1,63 +1,108 @@
 <?php
-// Start session
+// ========== SESSION START AT THE VERY TOP ==========
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Define base path for includes
-$base_path = dirname(__DIR__);
+// ========== REQUIRE FILES ==========
+require_once __DIR__ . '/../lib/base.php';
+require_once __DIR__ . '/../lib/auth.php';
+require_once __DIR__ . '/../lib/captcha.php';
 
-// Check if already logged in
-if (isset($_SESSION['user_id']) && isset($_SESSION['logged_in'])) {
-    header("Location: dashboard.php");
+// ========== REDIRECT IF LOGGED IN ==========
+if (is_logged_in()) {
+    redirect('dashboard.php');
     exit();
 }
 
-// Include dependencies
-require_once $base_path . '/app/config/config.php';
-require_once $base_path . '/app/controllers/AuthController.php';
 
-$error = '';
-$success = '';
-
-// Process registration form
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username']);
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
+// ========== AJAX ENDPOINT ==========
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_register'])) {
+    $username = $_POST['username'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    $captcha_response = $_POST['g-recaptcha-response'] ?? '';
     
-    // Validation
-    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
-        $error = "All fields are required.";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = "Invalid email format.";
-    } elseif (strlen($password) < 6) {
-        $error = "Password must be at least 6 characters.";
-    } elseif ($password !== $confirm_password) {
-        $error = "Passwords do not match.";
+    $response = [
+        'success' => false,
+        'message' => '',
+        'errors' => [],
+        'redirect' => null,
+        'debug' => ''
+    ];
+    
+    // Validate CSRF
+    if (!isset($_POST['csrf_token']) || !validate_csrf($_POST['csrf_token'])) {
+        $response['message'] = "Security token invalid.";
+        $response['debug'] = 'CSRF failed';
+        header('Content-Type: application/json');
+        echo json_encode($response);
+        exit();
+    }
+    
+    // CAPTCHA validation
+    if (empty($captcha_response)) {
+        $response['message'] = "Please complete the CAPTCHA verification.";
+        $response['debug'] = 'CAPTCHA empty';
+    } elseif (!Captcha::verify($captcha_response)) {
+        $response['message'] = "CAPTCHA verification failed.";
+        $response['debug'] = 'CAPTCHA verify failed';
     } else {
-        $authController = new AuthController();
-        $result = $authController->register($username, $email, $password);
-        
-        if ($result === "success") {
-            $success = "Registration successful! You will be redirected to login page in 3 seconds.";
-            
-            // Set success message in session for persistence during redirect
-            $_SESSION['registration_success'] = true;
-            $_SESSION['registration_message'] = "Registration successful! You can now login.";
-            
-            // JavaScript for showing success message and redirect
-            echo '<script>
-                setTimeout(function() {
-                    window.location.href = "login.php";
-                }, 3000);
-            </script>';
+        // Basic validation
+        if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+            $response['message'] = "All fields are required.";
+            $response['debug'] = 'Empty fields';
+        } elseif ($password !== $confirm_password) {
+            $response['errors']['confirm_password'] = "Passwords do not match.";
+            $response['debug'] = 'Password mismatch';
         } else {
-            $error = $result;
+            // Enhanced password strength validation
+            $password_errors = validate_password_strength($password);
+            
+            if (!empty($password_errors)) {
+                $response['message'] = implode("<br>", $password_errors);
+                $response['debug'] = 'Password strength failed';
+            } else {
+                // Call your existing register_user function
+                $result = register_user($username, $email, $password);
+                
+                // DEBUG: Log what register_user returns
+                $response['debug'] = 'register_user returned: ' . var_export($result, true);
+                $response['debug'] .= ' | Type: ' . gettype($result);
+                
+                // Check for any success indicator
+                $is_success = false;
+                
+                // Check multiple possible success returns
+                if ($result === "success") {
+                    $is_success = true;
+                } elseif ($result === true) {
+                    $is_success = true;
+                } elseif (is_numeric($result) && $result > 0) {
+                    $is_success = true;
+                } elseif (is_string($result) && (stripos($result, 'success') !== false || stripos($result, 'registered') !== false)) {
+                    $is_success = true;
+                }
+                
+                if ($is_success) {
+                    $response['success'] = true;
+                    $response['message'] = "Registration successful! Please login with your credentials.";
+                    $response['redirect'] = 'login.php';
+                    $_SESSION['show_verification_reminder'] = true;
+                } else {
+                    $response['message'] = $result ?: "Registration failed. Please try again.";
+                    $response['debug'] .= ' | Not recognized as success';
+                }
+            }
         }
     }
+    
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit();
 }
+// ===================================
 ?>
 
 <!DOCTYPE html>
@@ -66,238 +111,263 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Online Shopping System</title>
-    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/style.css">
-    <link rel="stylesheet" href="/online-shopping-system-product/assets/css/auth.css">
+    
+    <!-- External CSS Files -->
+    <link rel="stylesheet" href="../assets/css/notifications.css">
+    <link rel="stylesheet" href="../assets/css/auth.css">
+    
     <style>
-        /* Toast notification styles */
-        .toast-notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #4CAF50;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-            animation: slideUp 0.3s ease-out;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            max-width: 400px;
-            width: 90%;
-        }
-        
-        .toast-notification.error {
-            background: #f44336;
-        }
-        
-        .toast-notification.success {
-            background: #4CAF50;
-        }
-        
-        .toast-icon {
-            font-size: 20px;
-        }
-        
-        @keyframes slideUp {
-            from {
-                transform: translateX(-50%) translateY(100px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(-50%) translateY(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-            }
-        }
-        
-        /* Loading overlay for better UX */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            display: none;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #5a4bff;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        /* Small inline styles for password requirement colors */
+        .req-valid { color: #28a745 !important; }
+        .req-invalid { color: #dc3545 !important; }
     </style>
 </head>
-<body class="auth-page-body">
-    <div class="auth-page-container">
-        <div class="auth-card">
-            <div class="auth-icon">📝</div>
-            <h2>Create Account</h2>
-            <p>Join our shopping community today</p>
-            
-            <?php if ($error): ?>
-                <div class="auth-message message-error"><?php echo htmlspecialchars($error); ?></div>
-            <?php endif; ?>
-            
-            <?php if ($success): ?>
-                <div class="auth-message message-success"><?php echo htmlspecialchars($success); ?></div>
-            <?php endif; ?>
-            
-            <form method="POST" action="" id="registerForm" onsubmit="showLoading()">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <div class="input-wrapper">
-                        <span>👤</span>
-                        <input type="text" id="username" name="username" 
-                               value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" 
-                               required placeholder="Choose a username">
-                    </div>
+<body>
+    <!-- Header -->
+    <div class="auth-header">
+        <h1>Online Shopping System</h1>
+        <p>Create Your Account</p>
+    </div>
+    
+    <!-- Registration Form -->
+    <div class="auth-container">
+        <h2 class="auth-title">Register</h2>
+        
+        <!-- Error Message Container -->
+        <div id="error-message" class="auth-message error" style="display: none;"></div>
+        
+        <form id="register-form" method="POST">
+            <div class="auth-form">
+                <div class="auth-form-group">
+                    <label for="username" class="auth-label">Username:</label>
+                    <input type="text" id="username" name="username" class="auth-input" 
+                           value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>" required>
+                    <div class="auth-error" id="error-username"></div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <div class="input-wrapper">
-                        <span>📧</span>
-                        <input type="email" id="email" name="email" 
-                               value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" 
-                               required placeholder="Enter your email">
-                    </div>
+                <div class="auth-form-group">
+                    <label for="email" class="auth-label">Email:</label>
+                    <input type="email" id="email" name="email" class="auth-input" 
+                           value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" required>
+                    <div class="auth-error" id="error-email"></div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <div class="input-wrapper">
-                        <span>🔒</span>
-                        <input type="password" id="password" name="password" 
-                               required placeholder="Create a password (min 6 chars)">
-                    </div>
-                    <div class="password-strength" id="passwordStrength"></div>
+                <div class="auth-form-group">
+                    <label for="password" class="auth-label">Password:</label>
+                    <input type="password" id="password" name="password" class="auth-input" required>
+                    <div class="auth-error" id="error-password"></div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <div class="input-wrapper">
-                        <span>🔒</span>
-                        <input type="password" id="confirm_password" name="confirm_password" 
-                               required placeholder="Confirm your password">
-                    </div>
-                    <div class="password-match" id="passwordMatch"></div>
+                <div class="auth-form-group">
+                    <label for="confirm_password" class="auth-label">Confirm Password:</label>
+                    <input type="password" id="confirm_password" name="confirm_password" class="auth-input" required>
+                    <div class="auth-error" id="error-confirm_password"></div>
                 </div>
-                
-                <button type="submit" class="btn-auth" id="submitBtn">Create Account</button>
-            </form>
-            
-            <div class="switch">
-                Already have an account? <a href="login.php">Sign in here</a>
             </div>
+            
+            <!-- Password Requirements -->
+            <div class="password-requirements">
+                <strong>Password must contain:</strong>
+                <ul>
+                    <li id="req-length">✓ At least 8 characters</li>
+                    <li id="req-upper">✓ One uppercase letter (A-Z)</li>
+                    <li id="req-lower">✓ One lowercase letter (a-z)</li>
+                    <li id="req-number">✓ One number (0-9)</li>
+                    <li id="req-special">✓ One special character (!@#$%^&*()\-_=+{};:,<.>)</li>
+                </ul>
+            </div>
+            
+            <!-- Password Strength Meter -->
+            <div id="password-strength" class="password-strength"></div>
+            
+            <!-- CAPTCHA -->
+            <div class="captcha-container">
+                <p class="captcha-label">Please verify you're not a robot:</p>
+                <?php echo Captcha::render(); ?>
+            </div>
+            
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
+            
+            <!-- Submit Button -->
+            <button type="submit" id="register-btn" class="auth-btn">
+                Register
+            </button>
+        </form>
+        
+        <!-- Links -->
+        <div class="auth-links">
+            <p>Already have an account? <a href="login.php" class="auth-link">Login here</a></p>
         </div>
     </div>
     
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
+    <!-- Footer -->
+    <div class="auth-footer">
+        <p>&copy; <?php echo date('Y'); ?> Online Shopping System. All rights reserved.</p>
     </div>
     
-    <?php if ($success): ?>
-    <!-- Success Toast Notification -->
-    <div class="toast-notification success" id="successToast">
-        <span class="toast-icon">✅</span>
-        <span>Registration successful! Redirecting to login page...</span>
-    </div>
+    <!-- JavaScript Files -->
+    <script src="../assets/js/notifications.js"></script>
     
+    <!-- Registration JavaScript -->
     <script>
-        // Show success toast
-        document.addEventListener('DOMContentLoaded', function() {
-            const toast = document.getElementById('successToast');
-            if (toast) {
-                // Auto-remove toast after 3 seconds
-                setTimeout(() => {
-                    toast.style.animation = 'fadeOut 0.3s ease-out';
-                    setTimeout(() => toast.remove(), 300);
-                }, 2700);
-            }
-        });
-    </script>
-    <?php endif; ?>
-    
-    <script>
-        // Password validation
-        const password = document.getElementById('password');
-        const confirmPassword = document.getElementById('confirm_password');
-        const passwordStrength = document.getElementById('passwordStrength');
-        const passwordMatch = document.getElementById('passwordMatch');
-        const submitBtn = document.getElementById('submitBtn');
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Registration page loaded');
         
-        function checkPasswordStrength(pass) {
-            let strength = 0;
-            if (pass.length >= 6) strength++;
-            if (pass.match(/[a-z]+/)) strength++;
-            if (pass.match(/[A-Z]+/)) strength++;
-            if (pass.match(/[0-9]+/)) strength++;
-            if (pass.match(/[$@#&!]+/)) strength++;
+        // Password strength checker
+        function checkPasswordStrength(password) {
+            const requirements = {
+                length: password.length >= 8,
+                upper: /[A-Z]/.test(password),
+                lower: /[a-z]/.test(password),
+                number: /[0-9]/.test(password),
+                special: /[!@#$%^&*()\-_=+{};:,<.>]/.test(password)
+            };
             
-            const messages = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
-            const colors = ['#f44336', '#ff9800', '#ffc107', '#4caf50', '#2e7d32'];
+            // Update requirement indicators
+            const reqIds = ['length', 'upper', 'lower', 'number', 'special'];
+            reqIds.forEach(id => {
+                const element = document.getElementById('req-' + id);
+                if (element) {
+                    element.className = requirements[id] ? 'req-valid' : 'req-invalid';
+                }
+            });
             
-            passwordStrength.textContent = `Strength: ${messages[strength]}`;
-            passwordStrength.style.color = colors[strength];
+            // Update strength meter
+            const strengthMeter = document.getElementById('password-strength');
+            const metCount = Object.values(requirements).filter(Boolean).length;
+            
+            // Clear all classes
+            strengthMeter.className = 'password-strength';
+            
+            if (metCount === 0) {
+                strengthMeter.textContent = 'Password strength: Very Weak';
+                strengthMeter.classList.add('strength-very-weak');
+            } else if (metCount <= 2) {
+                strengthMeter.textContent = 'Password strength: Weak';
+                strengthMeter.classList.add('strength-weak');
+            } else if (metCount <= 4) {
+                strengthMeter.textContent = 'Password strength: Good';
+                strengthMeter.classList.add('strength-good');
+            } else {
+                strengthMeter.textContent = 'Password strength: Strong';
+                strengthMeter.classList.add('strength-strong');
+            }
         }
         
-        function checkPasswordMatch() {
-            if (confirmPassword.value === '') {
-                passwordMatch.textContent = '';
-                passwordMatch.className = 'password-match';
+        // Attach to password input
+        document.getElementById('password').addEventListener('input', function(e) {
+            checkPasswordStrength(e.target.value);
+        });
+        
+        // Initialize password strength if password already has value
+        const passwordInput = document.getElementById('password');
+        if (passwordInput.value) {
+            checkPasswordStrength(passwordInput.value);
+        }
+        
+        // AJAX Registration
+        document.getElementById('register-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submitted');
+            
+            // Clear previous errors
+            document.getElementById('error-message').style.display = 'none';
+            document.querySelectorAll('.auth-error').forEach(el => el.textContent = '');
+            
+            // Get form data
+            const formData = new FormData(this);
+            const captchaResponse = grecaptcha?.getResponse();
+            
+            if (!captchaResponse) {
+                showToast('Please complete the CAPTCHA verification.', 'error');
                 return;
             }
             
-            if (password.value === confirmPassword.value) {
-                passwordMatch.textContent = '✓ Passwords match';
-                passwordMatch.className = 'password-match match-good';
+            formData.append('g-recaptcha-response', captchaResponse);
+            formData.append('ajax_register', '1');
+            
+            // Show loading state
+            const submitBtn = document.getElementById('register-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '';
+            submitBtn.classList.add('auth-btn-loading');
+            submitBtn.disabled = true;
+            
+            // Send AJAX request
+            fetch('register.php', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('Response received');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Registration response:', data);
+                
+                // Reset button
+                submitBtn.textContent = originalText;
+                submitBtn.classList.remove('auth-btn-loading');
                 submitBtn.disabled = false;
-            } else {
-                passwordMatch.textContent = '✗ Passwords do not match';
-                passwordMatch.className = 'password-match match-bad';
-                submitBtn.disabled = true;
-            }
-        }
-        
-        function showLoading() {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-        }
-        
-        password.addEventListener('input', function() {
-            checkPasswordStrength(this.value);
-            checkPasswordMatch();
+                
+                if (data.success) {
+                    // Show success toast
+                    showToast(data.message || 'Registration successful!', 'success');
+                    
+                    // Clear form
+                    document.getElementById('register-form').reset();
+                    if (typeof grecaptcha !== 'undefined') {
+                        grecaptcha.reset();
+                    }
+                    
+                    // Redirect after delay
+                    setTimeout(() => {
+                        window.location.href = data.redirect || 'login.php';
+                    }, 2000);
+                } else {
+                    // Show error with debug info
+                    const errorMsg = data.message || 'Registration failed. Please try again.';
+                    showToast(errorMsg, 'error');
+                    
+                    // Show error in message div
+                    const errorDiv = document.getElementById('error-message');
+                    errorDiv.textContent = errorMsg;
+                    errorDiv.style.display = 'block';
+                    
+                    // Show field errors
+                    if (data.errors) {
+                        for (const field in data.errors) {
+                            const errorEl = document.getElementById('error-' + field);
+                            if (errorEl) {
+                                errorEl.textContent = data.errors[field];
+                            }
+                        }
+                    }
+                    
+                    // Log debug info to console
+                    if (data.debug) {
+                        console.log('Debug info:', data.debug);
+                    }
+                }
+            })
+            .catch(error => {
+                // Reset button
+                submitBtn.textContent = originalText;
+                submitBtn.classList.remove('auth-btn-loading');
+                submitBtn.disabled = false;
+                
+                console.error('Registration fetch error:', error);
+                showToast('Registration failed. Please check your connection and try again.', 'error');
+            });
         });
-        
-        confirmPassword.addEventListener('input', checkPasswordMatch);
-        
-        // Initial check
-        checkPasswordStrength(password.value);
-        checkPasswordMatch();
+    });
     </script>
 </body>
 </html>
