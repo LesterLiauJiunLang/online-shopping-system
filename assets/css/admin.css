@@ -1844,6 +1844,71 @@
     animation: pulse 2s infinite;
 }
 
+/* Simple Image Upload Styles */
+.simple-image-upload {
+    margin: 10px 0;
+}
+
+.btn-upload {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-upload:hover {
+    background-color: #45a049;
+}
+
+.preview-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.btn-remove {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove:hover {
+    background-color: #c82333;
+}
+
+.btn-delete-small {
+    background-color: #dc3545;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-delete-small:hover {
+    background-color: #c82333;
+}
+
 /* ========================
    Responsive Design
 ======================== */

@@ -3,7 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in and is admin
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../login.php");
     exit();
@@ -17,7 +16,6 @@ require_once __DIR__ . '/../../app/models/ProductModel.php';
 $db = db();
 $productModel = new Product($db);
 
-// Handle product deletion
 if (isset($_GET['delete'])) {
     $product_id = $_GET['delete'];
     
@@ -29,15 +27,12 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-// Initialize filter variables
 $search = $_GET['search'] ?? '';
 $category_filter = $_GET['category'] ?? '';
 $price_range = $_GET['price_range'] ?? '';
 
-// Get categories for filter
 $categories = $db->query("SELECT * FROM category")->fetchAll();
 
-// Build the SQL query with filters
 $sql = "
     SELECT p.*, c.name as category_name 
     FROM products p 
@@ -47,7 +42,6 @@ $sql = "
 
 $params = [];
 
-// Add search filter
 if (!empty($search)) {
     $sql .= " AND (p.name LIKE ? OR p.description LIKE ?)";
     $search_param = "%" . $search . "%";
@@ -55,13 +49,11 @@ if (!empty($search)) {
     $params[] = $search_param;
 }
 
-// Add category filter
 if (!empty($category_filter)) {
     $sql .= " AND p.category_id = ?";
     $params[] = $category_filter;
 }
 
-// Add price range filter
 if (!empty($price_range)) {
     switch ($price_range) {
         case '0-50':
@@ -79,10 +71,8 @@ if (!empty($price_range)) {
     }
 }
 
-// Add ordering
 $sql .= " ORDER BY p.created_at DESC";
 
-// Prepare and execute the query
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $products = $stmt->fetchAll();
@@ -221,23 +211,42 @@ $products = $stmt->fetchAll();
                     <div class="product-card">
     <div class="product-image <?php echo ($image_count > 1) ? 'has-multiple-images' : ''; ?>">
     <?php 
-    // Get product images
-    $image_stmt = $db->prepare("SELECT file_path FROM product_image WHERE product_id = ? ORDER BY sort_order ASC");
-    $image_stmt->execute([$product['product_id']]);
-    $product_images = $image_stmt->fetchAll();
-    $image_count = count($product_images);
+// Get product images
+$image_stmt = $db->prepare("SELECT file_path FROM product_image WHERE product_id = ? ORDER BY sort_order ASC");
+$image_stmt->execute([$product['product_id']]);
+$product_images = $image_stmt->fetchAll();
+$image_count = count($product_images);
+
+// Get the first image
+$first_image = $product_images[0] ?? null;
+$image_path = null;
+
+if ($first_image && !empty($first_image['file_path'])) {
+    // Try multiple possible paths
+    $possible_paths = [
+        '/' . $first_image['file_path'], // Add leading slash
+        '/online-shopping-system/' . $first_image['file_path'], // Full path
+        $first_image['file_path'], // Just the relative path
+        base($first_image['file_path']) // Use base() function
+    ];
     
-    // Get the first image
-    $first_image = $product_images[0] ?? null;
-    $image_path = null;
-    
-    if ($first_image && !empty($first_image['file_path'])) {
-        $full_image_path = __DIR__ . '/../../' . $first_image['file_path'];
-        if (file_exists($full_image_path)) {
-            // Use relative path from root
-            $image_path = '/online-shopping-system/' . $first_image['file_path'];
+    // Check which path works
+    foreach ($possible_paths as $path) {
+        // Remove any double slashes
+        $path = str_replace('//', '/', $path);
+        $test_path = $_SERVER['DOCUMENT_ROOT'] . $path;
+        
+        if (file_exists($test_path)) {
+            $image_path = $path;
+            break;
         }
     }
+    
+    // Debug logging
+    error_log("Product ID: {$product['product_id']}");
+    error_log("Stored path: {$first_image['file_path']}");
+    error_log("Using path: " . ($image_path ?: 'NOT FOUND'));
+}
     
     if ($image_path): 
     ?>

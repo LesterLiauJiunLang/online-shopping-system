@@ -1,12 +1,15 @@
 <?php
-require __DIR__ . '/../../app/models/_base.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
     redirect('../login.php');
 }
 
-require_once __DIR__ . '/../../app/config/database.php';
-$db = Database::getConnection();
+require_once __DIR__ . '/../../lib/base.php';
+$db = db();
 
 if (is_post()) {
     $product_id = req('product_id');

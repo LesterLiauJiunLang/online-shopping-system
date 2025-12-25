@@ -11,9 +11,8 @@ ini_set('display_errors', 1);
 // Set base URL for consistent navigation
 $base_url = '/online-shopping-system';
 
-// Check if the auth library files exist - if not, use fallback
+// Include the auth.php file from lib directory
 $authLibPath = __DIR__ . '/../lib/auth.php';
-$helpersLibPath = __DIR__ . '/../lib/helpers.php';
 
 // Initialize auth variable
 $auth = null;
@@ -21,13 +20,24 @@ $auth = null;
 // Try to include auth.php if it exists
 if (file_exists($authLibPath)) {
     require_once $authLibPath;
-    if (class_exists('Auth')) {
-        $auth = new Auth();
+    
+    // Check if the auth functions exist (functions-based system)
+    // OR if we need to create an Auth class instance
+    if (function_exists('is_logged_in')) {
+        // Functions-based system
+        $auth = new stdClass();
+        $auth->isLoggedIn = function() {
+            return is_logged_in();
+        };
+        $auth->isAdmin = function() {
+            return is_admin();
+        };
+    } else {
+        // Try to use SimpleAuth fallback
+        $auth = new SimpleAuth();
     }
-}
-
-// If auth.php doesn't exist, create a simple fallback
-if (!$auth) {
+} else {
+    // Create a simple fallback
     class SimpleAuth {
         public function isLoggedIn() {
             return isset($_SESSION['user_id']) && isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
@@ -39,6 +49,10 @@ if (!$auth) {
     }
     $auth = new SimpleAuth();
 }
+
+// Alternative: Direct session check (simpler approach)
+$isLoggedIn = isset($_SESSION['user_id']) && isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
+$isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
 // Get user's profile photo from session
 $profile_photo = $_SESSION['photo'] ?? 'avatar.png';
@@ -178,7 +192,7 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
             <a href="<?php echo $base_url; ?>/public/index.php">🛒 Online Shopping</a>
         </div>
         <div class="nav-links">
-            <?php if ($auth->isLoggedIn()): ?>
+            <?php if ($isLoggedIn): ?>
                 <div class="user-menu">
                     <!-- Profile Picture ONLY (no text) -->
                     <a href="<?php echo $base_url; ?>/public/profile.php" class="profile-pic-link" title="Go to Profile">
@@ -192,8 +206,9 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
                         Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>
                     </span>
                     
-                    <?php if ($auth->isAdmin()): ?>
+                    <?php if ($isAdmin): ?>
                         <div class="admin-menu">
+                            <a href="<?php echo $base_url; ?>/public/adminDashboard.php">Dashboard</a>
                             <a href="<?php echo $base_url; ?>/public/admin/products.php">Products</a>
                             <a href="<?php echo $base_url; ?>/public/admin/product_add.php">Add Product</a>
                             <a href="<?php echo $base_url; ?>/public/admin/orders.php">Orders</a>
@@ -202,8 +217,8 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
                         </div>
                     <?php else: ?>
                         <a href="<?php echo $base_url; ?>/public/dashboard.php">Dashboard</a>
-                        <a href="<?php echo $base_url; ?>/public/products.php">Shop</a>
-                        <a href="<?php echo $base_url; ?>/public/cart.php">Cart</a>
+                        <a href="<?php echo $base_url; ?>/public/members/products.php">Shop</a>
+                        <a href="<?php echo $base_url; ?>/public/members/cart.php">Cart</a>
                     <?php endif; ?>
                     
                     <a href="<?php echo $base_url; ?>/public/logout.php" class="logout-btn">Logout</a>

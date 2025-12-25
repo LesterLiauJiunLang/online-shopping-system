@@ -1,10 +1,11 @@
 <?php
-// lib/base.php
 // ============================================================================
 // PHP Setups
 // ============================================================================
 date_default_timezone_set('Asia/Kuala_Lumpur');
-//session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // ============================================================================
 // Database Connection
@@ -96,9 +97,7 @@ function csrf_token() {
 
 function validate_csrf($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
-
 }
-
 
 // Password strength validation
 function validate_password_strength($password) {
@@ -128,7 +127,7 @@ function validate_password_strength($password) {
 }
 
 // ============================================================================
-// Path and URL Functions (CRITICAL FOR PASSWORD RESET)
+// Path and URL Functions
 // ============================================================================
 function root($path = '') {
     return $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($path, '/');
@@ -141,7 +140,7 @@ function base($path = '') {
 }
 
 // ============================================================================
-// Email Functions (FOR PASSWORD RESET)
+// Email Functions
 // ============================================================================
 function get_mail() {
     require_once __DIR__ . '/PHPMailer.php';
@@ -175,7 +174,6 @@ function get_file($key) {
     return null;
 }
 
-
 // ============================================================================
 // HTML Helpers
 // ============================================================================
@@ -189,6 +187,11 @@ function encode($string) {
 function html_text($key, $attr = '') {
     $value = encode($GLOBALS[$key] ?? '');
     echo "<input type='text' id='$key' name='$key' value='$value' $attr>";
+}
+
+function html_search($key, $attr = '') {
+    $value = encode($GLOBALS[$key] ?? '');
+    echo "<input type='search' id='$key' name='$key' value='$value' $attr>";
 }
 
 function html_password($key, $attr = '') {
@@ -226,6 +229,18 @@ function html_file($key, $accept = '', $attr = '') {
     echo "<input type='file' id='$key' name='$key' accept='$accept' $attr>";
 }
 
+// Generate table headers <th> (From _base.php)
+function table_headers($fields, $sort, $dir, $href = '') {
+    foreach ($fields as $k => $v) {
+        $d = 'asc'; // Default direction
+        $c = '';    // Default class
+        
+        // TODO: Implement sorting logic
+        
+        echo "<th><a href='?sort=$k&dir=$d&$href' class='$c'>$v</a></th>";
+    }
+}
+
 // ============================================================================
 // Error Handlings
 // ============================================================================
@@ -253,8 +268,6 @@ function save_notification_and_redirect($message, $type = 'error', $url = null) 
     redirect($url);
 }
 
-
-
 // ============================================================================
 // Database Functions
 // ============================================================================
@@ -273,7 +286,143 @@ function is_exists($value, $table, $field) {
 }
 
 // ============================================================================
-// Your Additional Helpers 
+// Product Helper Functions (From _base.php)
+// ============================================================================
+
+/**
+ * Get all categories for dropdown
+ */
+function get_all_categories($db = null) {
+    global $_db;
+    $db = $db ?? $_db;
+    $stmt = $db->query("SELECT category_id, name FROM category ORDER BY name");
+    $categories = $stmt->fetchAll();
+    
+    $category_options = [];
+    foreach ($categories as $cat) {
+        $category_options[$cat['category_id']] = $cat['name'];
+    }
+    
+    return $category_options;
+}
+
+/**
+ * Get filtered products based on search criteria
+ */
+function get_filtered_products($db = null, $name = '', $category_id = '') {
+    global $_db;
+    $db = $db ?? $_db;
+    
+    $sql = "SELECT p.*, c.name as category_name 
+            FROM products p 
+            LEFT JOIN category c ON p.category_id = c.category_id 
+            WHERE 1=1";
+    $params = [];
+
+    // Add name search filter if provided
+    if (!empty($name)) {
+        $sql .= " AND (p.name LIKE ? OR p.description LIKE ?)";
+        $searchTerm = "%$name%";
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+    }
+
+    // Add category filter if provided
+    if (!empty($category_id) && $category_id != 'All') {
+        $sql .= " AND p.category_id = ?";
+        $params[] = $category_id;
+    }
+
+    // Price filter
+    if (!empty($min_price)) {
+        $sql .= " AND p.price >= ?";
+        $params[] = $min_price;
+    }
+    if (!empty($max_price)) {
+        $sql .= " AND p.price <= ?";
+        $params[] = $max_price;
+    }
+
+    // Add ordering
+    $sql .= " ORDER BY p.created_at DESC";
+
+    // Prepare and execute query
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+// Function to get price range (add this to your database functions)
+function get_price_range($db) {
+    $stmt = $db->prepare("SELECT MIN(price) as min_price, MAX(price) as max_price FROM products");
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Format price with RM currency
+ */
+function format_price($price) {
+    return 'RM ' . number_format($price, 2);
+}
+
+/**
+ * Get stock status class
+ */
+function get_stock_class($quantity) {
+    if ($quantity <= 0) {
+        return 'out-of-stock';
+    } elseif ($quantity <= 10) {
+        return 'low-stock';
+    }
+    return 'in-stock';
+}
+
+/**
+ * Get stock display text
+ */
+function get_stock_text($quantity) {
+    if ($quantity <= 0) {
+        return 'Out of Stock';
+    } elseif ($quantity <= 10) {
+        return "Low Stock: $quantity left";
+    }
+    return "In Stock: $quantity units";
+}
+
+/**
+ * Get product image URL (with fallback)
+ */
+function get_product_image($image) {
+    return !empty($image) ? $image : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+}
+
+// ============================================================================
+// Shopping Cart Functions (From _base.php)
+// ============================================================================
+function get_cart() {
+    return $_SESSION['cart'] ?? [];
+}
+
+function set_cart($cart = []) {
+    $_SESSION['cart'] = $cart;
+}
+
+function update_cart($id, $unit) {
+    $cart = get_cart();
+
+    if ($unit <= 0) {
+        unset($cart[$id]);
+    } else {
+        $cart[$id] = $unit;
+        ksort($cart); // sort by product id
+    }
+
+    set_cart($cart);
+}
+
+// ============================================================================
+// Additional Helper Functions
 // ============================================================================
 function displaySuccess($message) {
     if (!empty($message)) {
@@ -293,9 +442,6 @@ function format_date($date, $format = 'Y-m-d H:i') {
     return date($format, strtotime($date));
 }
 
-// ============================================================================
-// Database Helper Functions
-// ============================================================================
 function db() {
     global $_db;
     return $_db;
@@ -324,9 +470,8 @@ function build_query($new_params = []) {
 }
 
 // ============================================================================
-// Drag and Drop 
+// Image Upload and Processing Functions
 // ============================================================================
-
 function is_valid_image($file) {
     if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
         return false;
@@ -355,7 +500,6 @@ function is_valid_image($file) {
     
     return true;
 }
-
 
 function save_uploaded_image($file, $target_path, $max_width = 300, $max_height = 300, $quality = 90) {
     if (!is_valid_image($file)) {
@@ -415,15 +559,20 @@ function save_uploaded_image($file, $target_path, $max_width = 300, $max_height 
     $orig_width = imagesx($original_image);
     $orig_height = imagesy($original_image);
     
-    // Calculate new dimensions
+    // Calculate new dimensions - FIXED: Use explicit type casting
     $ratio = $orig_width / $orig_height;
+    
     if ($max_width / $max_height > $ratio) {
-        $new_width = $max_height * $ratio;
+        $new_width = intval($max_height * $ratio);  // Explicitly cast to int
         $new_height = $max_height;
     } else {
         $new_width = $max_width;
-        $new_height = $max_width / $ratio;
+        $new_height = intval($max_width / $ratio);  // Explicitly cast to int
     }
+    
+    // Ensure minimum dimensions of 1px
+    $new_width = max(1, $new_width);
+    $new_height = max(1, $new_height);
     
     // Create new image
     $new_image = imagecreatetruecolor($new_width, $new_height);
@@ -441,6 +590,8 @@ function save_uploaded_image($file, $target_path, $max_width = 300, $max_height 
     
     // Save image
     $extension = pathinfo($target_path, PATHINFO_EXTENSION);
+    $result = false;
+    
     switch(strtolower($extension)) {
         case 'jpg':
         case 'jpeg':
@@ -470,7 +621,6 @@ function save_uploaded_image($file, $target_path, $max_width = 300, $max_height 
     return $result;
 }
 
-
 function generate_profile_filename($user_id, $original_name = '') {
     $extension = 'jpg'; // Default to jpg for consistency
     if ($original_name) {
@@ -494,7 +644,5 @@ function delete_old_photo($filename, $directory) {
     if (file_exists($path)) {
         unlink($path);
     }
-
 }
-
 ?>

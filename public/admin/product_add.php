@@ -63,60 +63,27 @@ function handleImageUpload($product_id) {
         return true; // No file to upload
     }
     
-    // Single folder for all product images
-    $upload_dir = __DIR__ . '/../../ProductImage/';
+    $file = $_FILES['product_image'];
     
-    // Create folder if it doesn't exist
-    if (!file_exists($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
-    }
-    
-    // Get file info
-    $file_name = $_FILES['product_image']['name'];
-    $file_size = $_FILES['product_image']['size'];
-    $file_tmp = $_FILES['product_image']['tmp_name'];
-    $file_type = $_FILES['product_image']['type'];
-    $file_error = $_FILES['product_image']['error'];
-    
-    // Check for upload errors
-    if ($file_error !== UPLOAD_ERR_OK) {
-        $error = "Error uploading file: $file_name (Error code: $file_error)";
+    // Use the validation function from base.php
+    if (!is_valid_image($file)) {
+        $error = "Invalid image file. Please upload a valid image (JPG, PNG, GIF, WebP) under 2MB.";
         return false;
     }
     
-    // Check file size (max 5MB)
-    if ($file_size > 5 * 1024 * 1024) {
-        $error = "File $file_name is too large. Maximum size is 5MB.";
-        return false;
-    }
+    // Define upload directory relative to root
+    $upload_dir = root('ProductImage/');
     
-    // Check file type
-    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!in_array($file_type, $allowed_types)) {
-        $error = "File $file_name has invalid type. Only JPG, PNG, GIF, and WebP are allowed.";
-        return false;
-    }
+    // Generate filename using the helper function
+    $filename = "product_{$product_id}_" . time() . "_" . bin2hex(random_bytes(4));
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $target_filename = $filename . '.' . strtolower($extension);
+    $target_path = $upload_dir . $target_filename;
     
-    // Generate unique filename
-    $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-    $safe_name = preg_replace('/[^a-zA-Z0-9]/', '_', pathinfo($file_name, PATHINFO_FILENAME));
-    $safe_name = substr($safe_name, 0, 50);
-    
-    // Format: product_[id]_[timestamp]_[random].[ext]
-    $new_file_name = sprintf(
-        'product_%d_%s_%s.%s',
-        $product_id,
-        time(),
-        bin2hex(random_bytes(4)),
-        $file_ext
-    );
-    
-    $destination = $upload_dir . $new_file_name;
-    
-    // Move uploaded file
-    if (move_uploaded_file($file_tmp, $destination)) {
+    // Save uploaded image with resizing
+    if (save_uploaded_image($file, $target_path)) {
         // Store relative path in database
-        $relative_path = 'ProductImage/' . $new_file_name;
+        $relative_path = 'ProductImage/' . $target_filename;
         
         // Check if product already has an image
         $stmt = $db->prepare("SELECT * FROM product_image WHERE product_id = ?");
@@ -124,11 +91,8 @@ function handleImageUpload($product_id) {
         $existing_image = $stmt->fetch();
         
         if ($existing_image) {
-            // Delete old physical file
-            $old_file_path = __DIR__ . '/../../' . $existing_image['file_path'];
-            if (file_exists($old_file_path)) {
-                unlink($old_file_path);
-            }
+            // Delete old physical file using helper
+            delete_old_photo($existing_image['file_path'], $upload_dir);
             
             // Update existing record
             $stmt = $db->prepare("UPDATE product_image SET file_path = ? WHERE product_id = ?");
@@ -141,7 +105,7 @@ function handleImageUpload($product_id) {
         
         return true;
     } else {
-        $error = "Failed to upload file: $file_name";
+        $error = "Failed to save uploaded image.";
         return false;
     }
 }
@@ -319,65 +283,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 
                 <!-- Image Upload Section (SINGLE IMAGE ONLY) -->
-                <div class="form-group">
-                    <label>Product Image</label>
-                    <p class="help-text">Upload a single product image (Max 5MB. Supported: JPG, PNG, GIF, WebP)</p>
-                    
-                    <!-- Image upload area -->
-                    <div class="image-upload-area" id="imageUploadArea">
-                        <div class="upload-icon">📷</div>
-                        <p><strong>Click to upload</strong> or drag & drop image here</p>
-                        <p>Only one image can be uploaded</p>
-                        <p><small>Supported formats: JPG, PNG, GIF, WebP</small></p>
-                        <p><small>Maximum file size: 5MB</small></p>
-                    </div>
-                    
-                    <input type="file" id="imageInput" name="product_image" 
-                           accept="image/jpeg, image/jpg, image/png, image/gif, image/webp" 
-                           class="file-input-hidden">
-                    
-                    <!-- Preview of new image to be uploaded -->
-                    <div class="image-preview" id="imagePreview">
-                        <!-- Image will appear here -->
-                    </div>
-                    
-                    <!-- Status message -->
-                    <div id="uploadStatus" class="help-text"></div>
-                    
-                    <!-- Display existing image if editing -->
-                    <?php if ($is_edit && $product_image): 
-                        $image_path = htmlspecialchars($product_image['file_path']);
-                        $full_path = __DIR__ . '/../../' . htmlspecialchars($product_image['file_path']);
-                        $image_exists = file_exists($full_path);
-                    ?>
-                        <div class="existing-image">
-                            <p><strong>Current Image:</strong></p>
-                            <div id="existingImageContainer">
-                                <?php if ($image_exists): ?>
-                                    <div class="existing-image-item" data-image-id="<?php echo $product_image['image_id']; ?>">
-                                        <img src="<?php echo $image_path; ?>" 
-                                             alt="Product Image"
-                                             loading="lazy"
-                                             style="max-width: 200px; max-height: 200px;">
-                                        <div class="image-actions">
-                                            <button type="button" class="delete-btn" 
-                                                    onclick="deleteProductImage(<?php echo $product_image['image_id']; ?>, <?php echo $product['product_id']; ?>)" 
-                                                    title="Delete this image">
-                                                Delete Image
-                                            </button>
-                                        </div>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="image-placeholder">
-                                        <span>⚠️ Image Not Found</span>
-                                    </div>
-                                <?php endif; ?>
+                 <!-- Image Upload Section (SIMPLE SINGLE IMAGE) -->
+<div class="form-group">
+    <label>Product Image</label>
+    <p class="help-text">Upload a single product image (Max 2MB. Supported: JPG, PNG, GIF, WebP)</p>
+    
+    <!-- Simple file input with preview -->
+    <div class="simple-image-upload">
+        <!-- Hidden file input -->
+        <input type="file" id="product_image" name="product_image" 
+               accept="image/jpeg, image/jpg, image/png, image/gif, image/webp" 
+               style="display: none;" 
+               onchange="previewImage(this)">
+        
+        <!-- Upload button -->
+        <button type="button" class="btn-upload" onclick="document.getElementById('product_image').click()">
+            <i class="fas fa-cloud-upload-alt"></i> Choose Image
+        </button>
+        
+        <!-- Image preview area -->
+        <div class="image-preview-container" id="imagePreviewContainer" style="margin-top: 10px; display: none;">
+            <div class="preview-wrapper">
+                <img id="imagePreview" src="" alt="Preview" style="max-width: 200px; max-height: 200px;">
+                <button type="button" class="btn-remove" onclick="removeImage()" title="Remove image">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="fileName" class="file-name" style="margin-top: 5px; font-size: 12px; color: #666;"></div>
+        </div>
+        
+        <!-- Display existing image if editing -->
+        <?php if ($is_edit && $product_image): 
+            $image_path = htmlspecialchars($product_image['file_path']);
+            $full_path = __DIR__ . '/../../' . htmlspecialchars($product_image['file_path']);
+            $image_exists = file_exists($full_path);
+        ?>
+            <div class="existing-image" style="margin-top: 15px;">
+                <p><strong>Current Image:</strong></p>
+                <div id="existingImageContainer">
+                    <?php if ($image_exists): ?>
+                        <div class="existing-image-item" style="position: relative; display: inline-block;">
+                            <img src="<?php echo $image_path; ?>" 
+                                 alt="Product Image"
+                                 style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 4px;">
+                            <div class="image-actions" style="margin-top: 5px;">
+                                <button type="button" class="btn-delete-small" 
+                                        onclick="deleteProductImage(<?php echo $product_image['image_id']; ?>, <?php echo $product['product_id']; ?>)" 
+                                        title="Delete this image">
+                                    <i class="fas fa-trash"></i> Delete Image
+                                </button>
                             </div>
+                        </div>
+                    <?php else: ?>
+                        <div class="image-placeholder" style="padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                            <span style="color: #dc3545;">
+                                <i class="fas fa-exclamation-triangle"></i> Image file not found
+                            </span>
                         </div>
                     <?php endif; ?>
                 </div>
+            </div>
+        <?php endif; ?>
+    </div>
+    
+    <!-- Status message -->
+    <div id="uploadStatus" class="help-text" style="margin-top: 5px;"></div>
+</div>
                 
-                <div class="form-actions">
+                 <div class="form-actions">
                     <div>
                         <button type="submit" class="btn-submit">
                             <?php echo $is_edit ? 'Update Product' : 'Add Product'; ?>
@@ -390,396 +363,143 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <small>Last updated: <?php echo date('M d, Y H:i', strtotime($product['updated_at'])); ?></small>
                         </div>
                     <?php endif; ?>
-                </div>
+                 </div>
             </form>
         </div>
     </div>
     
-    <script>
-    // DOM elements
-    const imageUploadArea = document.getElementById('imageUploadArea');
-    const imageInput = document.getElementById('imageInput');
-    const imagePreview = document.getElementById('imagePreview');
-    const form = document.querySelector('form');
-
-    // Image upload area click handler
-    imageUploadArea.addEventListener('click', function(e) {
-        console.log("Upload area clicked directly");
-        e.stopPropagation();
-        e.preventDefault();
+   <script>
+// Simple image preview function
+function previewImage(input) {
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const preview = document.getElementById('imagePreview');
+    const fileName = document.getElementById('fileName');
+    const status = document.getElementById('uploadStatus');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
         
-        // Direct click on the file input
-        imageInput.click();
-    });
-
-    // Also add direct click to file input itself if user clicks on it
-    imageInput.addEventListener('click', function(e) {
-        e.stopPropagation();
-        console.log("File input clicked directly");
-    });
-
-    // Handle file selection - SINGLE FILE ONLY
-    imageInput.addEventListener('change', function() {
-        console.log("File input changed, file selected:", this.files[0]?.name);
-        if (this.files.length > 0) {
-            handleFile(this.files[0]);
-        }
-    });
-
-    // Handle and preview SINGLE file
-    function handleFile(file) {
-        console.log("handleFile called with file:", {
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            lastModified: file.lastModified
-        });
-        
-        // Clear previous preview
-        imagePreview.innerHTML = '';
-        
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            alert(`❌ File "${file.name}" is not an image. Please select an image file.`);
-            imageInput.value = ''; // Clear the input
+        // Validate file size (2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            status.innerHTML = '<span style="color: #dc3545;">File too large. Maximum size is 2MB.</span>';
+            input.value = '';
             return;
         }
         
-        // Validate file size (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            alert(`❌ File "${file.name}" is too large. Maximum size is 5MB.`);
-            imageInput.value = ''; // Clear the input
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            status.innerHTML = '<span style="color: #dc3545;">Invalid file type. Please upload an image.</span>';
+            input.value = '';
             return;
         }
         
         const reader = new FileReader();
         
-        reader.onloadstart = function() {
-            console.log("Starting to read file:", file.name);
-        };
-        
         reader.onload = function(e) {
-            console.log("✅ File loaded successfully:", file.name);
-            
-            const div = document.createElement('div');
-            div.className = 'image-preview-item';
-            div.dataset.filename = file.name;
-            
-            const img = document.createElement('img');
-            img.src = e.target.result;
-            img.alt = file.name;
-            img.style.maxWidth = '200px';
-            img.style.maxHeight = '200px';
-            
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'remove-btn';
-            removeBtn.innerHTML = '×';
-            removeBtn.title = 'Remove image';
-            removeBtn.onclick = function() {
-                console.log("Removing preview for:", file.name);
-                div.remove();
-                imageInput.value = ''; // Clear the file input
-            };
-            
-            const fileName = document.createElement('div');
-            fileName.style.fontSize = '10px';
-            fileName.style.textAlign = 'center';
-            fileName.style.padding = '2px';
-            fileName.style.background = 'rgba(0,0,0,0.5)';
-            fileName.style.color = 'white';
-            fileName.textContent = file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name;
-            
-            div.appendChild(img);
-            div.appendChild(removeBtn);
-            div.appendChild(fileName);
-            imagePreview.appendChild(div);
-            
-            // Make preview area visible
-            imagePreview.style.display = 'flex';
-        };
+            preview.src = e.target.result;
+            previewContainer.style.display = 'block';
+            fileName.textContent = file.name;
+            status.innerHTML = '<span style="color: #28a745;">Image ready for upload.</span>';
+        }
         
-        reader.onerror = function(e) {
-            console.error("❌ Error reading file:", file.name, e);
-            alert(`❌ Error reading file "${file.name}". Please try again.`);
-            imageInput.value = ''; // Clear the input
-        };
-        
-        reader.onloadend = function() {
-            console.log("Finished reading file:", file.name);
-        };
-        
-        // Read as Data URL
         reader.readAsDataURL(file);
     }
+}
 
-    // Delete existing product image using AJAX
-    function deleteProductImage(imageId, productId) {
-        console.log("Deleting image:", imageId, "for product:", productId);
-        
-        if (!confirm('Are you sure you want to delete this image? This action cannot be undone.')) {
-            return;
-        }
-        
-        // Show loading indicator
-        const deleteBtn = event.target;
-        const originalText = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = 'Deleting...';
-        deleteBtn.disabled = true;
-        
-        // Create form data
-        const formData = new FormData();
-        formData.append('image_id', imageId);
-        formData.append('product_id', productId);
-        
-        // Send AJAX request
-        fetch('../admin/delete_image.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.text();
-        })
-        .then(data => {
-            console.log("Delete response:", data);
-            
-            if (data.includes('successfully') || data.includes('deleted')) {
-                // Remove the image element from DOM
-                const imageElement = document.querySelector('.existing-image-item');
-                if (imageElement) {
-                    imageElement.style.opacity = '0.5';
-                    setTimeout(() => {
-                        const existingImageContainer = document.getElementById('existingImageContainer');
-                        if (existingImageContainer) {
-                            existingImageContainer.innerHTML = '<p>No image uploaded for this product.</p>';
-                        }
-                        
-                        // Show success message
-                        showMessage('Image deleted successfully!', 'success');
-                    }, 300);
-                }
-            } else {
-                throw new Error(data || 'Unknown error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showMessage('Error deleting image: ' + error.message, 'error');
-            
-            // Reset button
-            deleteBtn.innerHTML = originalText;
-            deleteBtn.disabled = false;
-        });
+// Remove selected image
+function removeImage() {
+    const input = document.getElementById('product_image');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const status = document.getElementById('uploadStatus');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    status.innerHTML = '';
+}
+
+// Delete existing product image (AJAX)
+function deleteProductImage(imageId, productId) {
+    if (!confirm('Are you sure you want to delete this image? This action cannot be undone.')) {
+        return;
     }
+    
+    const formData = new FormData();
+    formData.append('image_id', imageId);
+    formData.append('product_id', productId);
+    
+    fetch('delete_image.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        if (data.includes('successfully') || data.includes('deleted')) {
+            // Remove the image from UI
+            const existingContainer = document.getElementById('existingImageContainer');
+            if (existingContainer) {
+                existingContainer.innerHTML = '<p style="color: #666;">No image uploaded for this product.</p>';
+            }
+            showMessage('Image deleted successfully!', 'success');
+        } else {
+            showMessage('Error: ' + data, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Error deleting image: ' + error.message, 'error');
+    });
+}
 
-    // Universal message display function
-    function showMessage(text, type = 'info') {
-        // Remove existing messages
-        const existingMsgs = document.querySelectorAll('.global-message');
-        existingMsgs.forEach(msg => msg.remove());
-        
-        // Create message element
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `global-message message-${type}`;
-        
-        // Add styles inline
-        Object.assign(messageDiv.style, {
-            position: 'fixed',
-            top: '80px',
-            right: '20px',
-            padding: '15px 20px',
-            borderRadius: '6px',
-            fontWeight: '500',
-            zIndex: '9999',
-            maxWidth: '350px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            animation: 'slideIn 0.3s ease-out',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-        });
-        
-        // Set colors based on type
-        switch(type) {
-            case 'success':
-                messageDiv.style.backgroundColor = '#d4edda';
-                messageDiv.style.color = '#155724';
-                messageDiv.style.borderLeft = '4px solid #28a745';
-                break;
-            case 'error':
-                messageDiv.style.backgroundColor = '#f8d7da';
-                messageDiv.style.color = '#721c24';
-                messageDiv.style.borderLeft = '4px solid #dc3545';
-                break;
-            case 'warning':
-                messageDiv.style.backgroundColor = '#fff3cd';
-                messageDiv.style.color = '#856404';
-                messageDiv.style.borderLeft = '4px solid #ffc107';
-                break;
-            default:
-                messageDiv.style.backgroundColor = '#d1ecf1';
-                messageDiv.style.color = '#0c5460';
-                messageDiv.style.borderLeft = '4px solid #17a2b8';
-        }
-        
-        // Add icon
-        let icon = 'ℹ️';
-        switch(type) {
-            case 'success': icon = '✅'; break;
-            case 'error': icon = '❌'; break;
-            case 'warning': icon = '⚠️'; break;
-        }
-        
-        messageDiv.innerHTML = `<span style="font-size: 16px;">${icon}</span> ${text}`;
-        
-        // Add to body
-        document.body.appendChild(messageDiv);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (messageDiv.parentNode) {
-                messageDiv.style.opacity = '0';
-                messageDiv.style.transition = 'opacity 0.5s';
-                setTimeout(() => messageDiv.remove(), 500);
-            }
-        }, 5000);
-    }
-
-    // Add CSS animation
-    const messageStyle = document.createElement('style');
-    messageStyle.textContent = `
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        .message-close-btn {
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-            margin-left: auto;
-            padding: 0 5px;
-        }
+// Simple message display
+function showMessage(text, type = 'info') {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `global-message message-${type}`;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 4px;
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        background-color: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
+        z-index: 9999;
+        max-width: 300px;
     `;
-    document.head.appendChild(messageStyle);
+    messageDiv.textContent = text;
+    
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        messageDiv.remove();
+    }, 5000);
+}
 
-    // Drag and drop functionality
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        imageUploadArea.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-        imageUploadArea.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        imageUploadArea.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight() {
-        console.log("Drag highlight");
-        imageUploadArea.classList.add('dragover');
-    }
-
-    function unhighlight() {
-        console.log("Drag unhighlight");
-        imageUploadArea.classList.remove('dragover');
-    }
-
-    // Handle dropped files - SINGLE FILE ONLY
-    imageUploadArea.addEventListener('drop', handleDrop, false);
-
-    function handleDrop(e) {
-        console.log("Files dropped");
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        console.log("Dropped files:", files.length);
-        
-        if (files.length === 0) {
-            return;
-        }
-        
-        // Only take the first file if multiple are dropped
-        const file = files[0];
-        
-        // Clear previous selection
-        imageInput.value = '';
-        
-        // Create a new FileList with just the first file
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        imageInput.files = dataTransfer.files;
-        
-        handleFile(file);
-        
-        // Inform user if multiple files were dropped
-        if (files.length > 1) {
-            setTimeout(() => {
-                showMessage(`Only the first file (${file.name}) was selected. Multiple images are not supported.`, 'warning');
-            }, 500);
-        }
-    }
-
-    // Initialize
-    console.log("Single image upload script loaded");
-
-    // Validate form before submission
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const imageInput = document.getElementById('product_image');
+    
     form.addEventListener('submit', function(e) {
-        console.log("Form submit event triggered");
+        const file = imageInput.files[0];
         
-        // Basic validation
-        const name = document.getElementById('name').value.trim();
-        const price = document.getElementById('price').value.trim();
-        
-        if (!name) {
-            e.preventDefault();
-            alert('Product name is required!');
-            document.getElementById('name').focus();
-            return;
-        }
-        
-        if (!price || isNaN(price) || parseFloat(price) <= 0) {
-            e.preventDefault();
-            alert('Please enter a valid price (greater than 0)!');
-            document.getElementById('price').focus();
-            return;
-        }
-        
-        // Check if file is too large (single file only)
-        if (imageInput.files.length > 0) {
-            const file = imageInput.files[0];
-            if (file.size > 5 * 1024 * 1024) {
+        // Validate image if selected
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
                 e.preventDefault();
-                alert(`File "${file.name}" is too large. Maximum size is 5MB.`);
+                showMessage('Image file is too large. Maximum size is 2MB.', 'error');
                 return;
             }
         }
         
-        // Disable submit button to prevent double submission
+        // Prevent double submission
         const submitBtn = form.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<?php echo $is_edit ? 'Updating...' : 'Adding...'; ?>';
-        
-        // Log for debugging
-        console.log("Form passed validation, submitting...");
     });
-    </script>
+});
+</script>
 
 </body>
 </html>

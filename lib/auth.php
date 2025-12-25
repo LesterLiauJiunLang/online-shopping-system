@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+require_once __DIR__ . '/../app/models/UserModel.php';
 // ============================================================================
 // Global User Object (From Practical 7)
 // ============================================================================
@@ -177,6 +178,66 @@ function login($username, $password) {
     } catch(PDOException $exception) {
         return "Database error: " . $exception->getMessage();
     }
+}
+
+// ============================================================================
+// User Finding Functions (from AuthController)
+// ============================================================================
+
+/**
+ * New OO-style login using AuthController approach
+ */
+function auth_login($value, $password) {
+    global $_db;
+    
+    // Use existing AuthController logic
+    $user = find_user_by_email_or_username($value);
+    
+    if (!$user) {
+        return "Account not found.";
+    }
+
+    if (!password_verify($password, $user['password_hash'])) {
+        return "Invalid password.";
+    }
+
+    // Use your existing login session setup
+    return login($value, $password); // This calls your existing login function
+}
+
+/**
+ * New OO-style registration
+ */
+function auth_register($username, $email, $password) {
+    // Check if email exists
+    if (!is_unique($email, 'users', 'email')) {
+        return "Email already exists.";
+    }
+    
+    // Check if username exists  
+    if (!is_unique($username, 'users', 'username')) {
+        return "Username already exists.";
+    }
+    
+    // Use existing register_user function
+    return register_user($username, $email, $password);
+}
+
+function find_user_by_email_or_username($value) {
+    $userModel = new User(); // Uses global $_db connection
+    return $userModel->findByEmailOrUsername($value);
+}
+
+function email_exists($email) {
+    $userModel = new User();
+    return $userModel->getUserByEmail($email) !== false;
+}
+
+/**
+ * Check if username exists (from AuthController)
+ */
+function username_exists($username) {
+    return !is_unique($username, 'users', 'username');
 }
 
 function logout() {

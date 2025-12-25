@@ -1,12 +1,15 @@
 <?php
-require __DIR__ . '/../../app/models/_base.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
     redirect('../login.php');
 }
 
-require_once __DIR__ . '/../../app/config/database.php';
-$db = Database::getConnection();
+require_once __DIR__ . '/../../lib/base.php';
+$db = db();
 
 $stmt = $db->prepare("
     SELECT sc.product_id, sc.quantity, p.price
@@ -60,9 +63,17 @@ if (is_post()) {
         $db->beginTransaction();
 
         // 1️⃣ Create order
-        $stmt = $db->prepare("
-            INSERT INTO orders (user_id, order_date, total_amount, status, shipping_address, payment_method, payment_status)
-            VALUES (?, NOW(), 0, 'Pending', ?, ?, 'Unpaid')
+         $stmt = db()->prepare("
+        INSERT INTO orders (
+        user_id,
+        order_date,
+        total_amount,
+        status,
+        shipping_address,
+        payment_method,
+        payment_status
+        )
+            VALUES (?, NOW(), 0, 'Pending', ?, ?, 'Paid')
         ");
         $stmt->execute([
             $_SESSION['user_id'],
@@ -80,7 +91,7 @@ if (is_post()) {
             $total += $subtotal;
 
             $stmt = $db->prepare("
-                INSERT INTO order_item (order_id, product_id, quantity, unit_price, subtotal)
+                INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal)
                 VALUES (?, ?, ?, ?, ?)
             ");
             $stmt->execute([

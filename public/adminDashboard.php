@@ -210,9 +210,11 @@ try {
         ORDER BY 
             CASE status
                 WHEN 'pending' THEN 1
-                WHEN 'delivered' THEN 2
-                WHEN 'cancelled' THEN 3
-                ELSE 4
+                WHEN 'processing' THEN 2
+                WHEN 'shipped' THEN 3
+                WHEN 'completed' THEN 4
+                WHEN 'cancelled' THEN 5
+                ELSE 6
             END
     ");
     $revenueStmt->execute([$currentMonth]);
@@ -241,9 +243,11 @@ try {
         ORDER BY 
             CASE status
                 WHEN 'pending' THEN 1
-                WHEN 'delivered' THEN 2
-                WHEN 'cancelled' THEN 3
-                ELSE 4
+                WHEN 'processing' THEN 2
+                WHEN 'shipped' THEN 3
+                WHEN 'completed' THEN 4
+                WHEN 'cancelled' THEN 5
+                ELSE 6
             END
     ");
     $statusStmt->execute();
@@ -265,7 +269,7 @@ try {
         SELECT SUM(total_amount) as revenue 
         FROM orders 
         WHERE DATE_FORMAT(order_date, '%Y-%m') = ?
-        AND status IN ('delivered')
+        AND status IN ('completed')
     ");
     $prevMonthStmt->execute([$prevMonth]);
     $prevMonthResult = $prevMonthStmt->fetch();
@@ -376,7 +380,7 @@ function generateFinancialReport($db, $dateFrom, $dateTo) {
             COUNT(o.order_id) as total_orders,
             SUM(o.total_amount) as daily_revenue,
             AVG(o.total_amount) as avg_order_value,
-            SUM(CASE WHEN o.status = 'delivered' THEN o.total_amount ELSE 0 END) as delivered_revenue,
+            SUM(CASE WHEN o.status = 'completed' THEN o.total_amount ELSE 0 END) as completed_revenue,
             SUM(CASE WHEN o.status = 'cancelled' THEN o.total_amount ELSE 0 END) as cancelled_revenue
         FROM orders o
         WHERE DATE(o.order_date) BETWEEN ? AND ?
@@ -502,16 +506,6 @@ function generateFinancialReport($db, $dateFrom, $dateTo) {
     <!-- ========================
            ADMIN DASHBOARD WITH REPORT FUNCTIONALITY
     ======================== -->
-    <!-- Admin Navigation -->
-    <div class="dashboard-actions" style="margin: 2rem 0;">
-        <h3>Quick Actions</h3>
-        <div class="action-buttons">
-            <a href="admin/products.php" class="btn btn-primary">Manage Products</a>
-            <a href="admin/product_add.php" class="btn btn-success">Add New Product</a>
-            <a href="admin/orders.php" class="btn btn-orange">View All Orders</a>
-            <a href="admin/categories.php" class="btn btn-info">🏷️ Edit Categories</a>
-        </div>
-    </div>
     
     <!-- Report Filters Section -->
     <div class="filter-section" style="margin-bottom: 2rem;">
@@ -597,7 +591,7 @@ function generateFinancialReport($db, $dateFrom, $dateTo) {
                         <th>Orders</th>
                         <th>Revenue (RM)</th>
                         <th>Avg Order (RM)</th>
-                        <th>Delivered (RM)</th>
+                        <th>Completed (RM)</th>
                         <th>Cancelled (RM)</th>
                     </tr>
                     <?php endif; ?>
@@ -651,7 +645,7 @@ function generateFinancialReport($db, $dateFrom, $dateTo) {
                         <td><?php echo $row['total_orders']; ?></td>
                         <td><?php echo number_format($row['daily_revenue'] ?? 0, 2); ?></td>
                         <td><?php echo number_format($row['avg_order_value'] ?? 0, 2); ?></td>
-                        <td><?php echo number_format($row['delivered_revenue'] ?? 0, 2); ?></td>
+                        <td><?php echo number_format($row['completed_revenue'] ?? 0, 2); ?></td>
                         <td><?php echo number_format($row['cancelled_revenue'] ?? 0, 2); ?></td>
                         <?php endif; ?>
                     </tr>
@@ -976,9 +970,9 @@ const colors = {
 // Status colors mapping
 const statusColors = {
     'pending': '#ffc107',
-    'confirmed': '#17a2b8',
+    'processing': '#17a2b8',
     'shipped': '#5a4bff',
-    'delivered': '#28a745',
+    'completed': '#28a745',
     'cancelled': '#dc3545'
 };
 
@@ -1510,9 +1504,9 @@ function printSalesAnalytics() {
                     }
                     
                     .status-pending { background: #fff3cd; color: #856404; }
-                    .status-delivered { background: #d4edda; color: #155724; }
+                    .status-processing { background: #d4edda; color: #155724; }
                     .status-cancelled { background: #f8d7da; color: #721c24; }
-                    .status-confirmed { background: #d1ecf1; color: #0c5460; }
+                    .status-completed { background: #d1ecf1; color: #0c5460; }
                     .status-shipped { background: #cce5ff; color: #004085; }
                 </style>
             </head>
@@ -1645,9 +1639,10 @@ function printSalesAnalytics() {
                                                     <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
                                                         <div style="width: ${barWidth}%; height: 100%; 
                                                             background: ${item.status === 'pending' ? '#ffc107' : 
-                                                                        item.status === 'delivered' ? '#28a745' : 
+                                                                        item.status === 'processing' ? '#a328a7ff' :
+                                                                        item.status === 'completed' ? '#28a745' : 
                                                                         item.status === 'cancelled' ? '#dc3545' : 
-                                                                        item.status === 'confirmed' ? '#17a2b8' : '#5a4bff'};">
+                                                                        item.status === 'shipped' ? '#17a2b8' : '#5a4bff'};">
                                                         </div>
                                                     </div>
                                                 </td>

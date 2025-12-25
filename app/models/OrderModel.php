@@ -57,7 +57,7 @@ class Order {
                 u.email 
             FROM orders o 
             LEFT JOIN users u ON o.user_id = u.user_id 
-            ORDER BY o.{$dateColumn} DESC 
+            ORDER BY o.{$dateColumn} ASC 
             LIMIT ?
         ";
         
@@ -88,7 +88,7 @@ public function getTotalOrdersCount() {
     
     // For admin dashboard - total revenue
     public function getTotalRevenue() {
-        $stmt = $this->conn->prepare("SELECT SUM(total_amount) as total FROM orders WHERE status = 'delivered' OR status = 'completed'");
+        $stmt = $this->conn->prepare("SELECT SUM(total_amount) as total FROM orders WHERE status = 'shipped' OR status = 'completed'");
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'] ?? 0;

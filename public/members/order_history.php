@@ -1,15 +1,18 @@
 <?php
-require __DIR__ . '/../../app/models/_base.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
     redirect('../login.php');
 }
 
-require_once __DIR__ . '/../../app/config/database.php';
-$db = Database::getConnection();
+require_once __DIR__ . '/../../lib/base.php';
+$db = db();
 
 $stmt = $db->prepare("
-    SELECT order_id, order_date, total_amount, status
+    SELECT *
     FROM orders
     WHERE user_id = ?
     ORDER BY order_date DESC
