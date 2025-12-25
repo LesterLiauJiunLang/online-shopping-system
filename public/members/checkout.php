@@ -1,14 +1,14 @@
 <?php
-require __DIR__ . '/../../app/models/_base.php';
+require __DIR__ . '/../../lib/base.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
     redirect('../login.php');
 }
 
 require_once __DIR__ . '/../../app/config/database.php';
-$db = Database::getConnection();
 
-$stmt = $db->prepare("
+
+$stmt = db()->prepare("
     SELECT sc.product_id, sc.quantity, p.price
     FROM shopping_cart sc
     JOIN products p ON p.product_id = sc.product_id
@@ -57,12 +57,20 @@ if (is_post()) {
     $payment  = req('payment_method');
 
     try {
-        $db->beginTransaction();
+        db()->beginTransaction();
 
         // 1️⃣ Create order
-        $stmt = $db->prepare("
-            INSERT INTO orders (user_id, order_date, total_amount, status, shipping_address, payment_method, payment_status)
-            VALUES (?, NOW(), 0, 'Pending', ?, ?, 'Unpaid')
+        $stmt = db()->prepare("
+        INSERT INTO orders (
+        user_id,
+        order_date,
+        total_amount,
+        status,
+        shipping_address,
+        payment_method,
+        payment_status
+        )
+            VALUES (?, NOW(), 0, 'Pending', ?, ?, 'Paid')
         ");
         $stmt->execute([
             $_SESSION['user_id'],
@@ -70,7 +78,7 @@ if (is_post()) {
             $payment
         ]);
 
-        $order_id = $db->lastInsertId();
+        $order_id = db()->lastInsertId();
 
         // 2️⃣ Insert order items
         $total = 0;
@@ -79,8 +87,8 @@ if (is_post()) {
             $subtotal = $item['price'] * $item['quantity'];
             $total += $subtotal;
 
-            $stmt = $db->prepare("
-                INSERT INTO order_item (order_id, product_id, quantity, unit_price, subtotal)
+            $stmt = db()->prepare("
+                INSERT INTO order_items (order_id, product_id, quantity, unit_price, subtotal)
                 VALUES (?, ?, ?, ?, ?)
             ");
             $stmt->execute([
@@ -93,7 +101,7 @@ if (is_post()) {
         }
 
         // 3️⃣ Update total
-        $stmt = $db->prepare("
+        $stmt = db()->prepare("
             UPDATE orders
             SET total_amount = ?
             WHERE order_id = ?
@@ -101,19 +109,19 @@ if (is_post()) {
         $stmt->execute([$total, $order_id]);
 
         // 4️⃣ Clear cart
-        $stmt = $db->prepare("
+        $stmt = db()->prepare("
             DELETE FROM shopping_cart
             WHERE user_id = ?
         ");
         $stmt->execute([$_SESSION['user_id']]);
 
         // 5️⃣ Commit
-        $db->commit();
+        db()->commit();
 
         redirect("order_detail.php?id=$order_id");
 
     } catch (Exception $e) {
-        $db->rollBack();
+        db()->rollBack();
         die("Checkout failed: " . $e->getMessage());
     }
 }

@@ -1,16 +1,15 @@
 <?php
-require __DIR__ . '/../../app/models/_base.php';
+require __DIR__ . '/../../lib/base.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
     redirect('../login.php');
 }
 
 require_once __DIR__ . '/../../app/config/database.php';
-$db = Database::getConnection();
 
 $order_id = req('id');
 
-$stmt = $db->prepare("
+$stmt = db()->prepare("
     SELECT *
     FROM orders
     WHERE order_id = ? AND user_id = ?
@@ -22,14 +21,14 @@ if (!$order) {
     redirect('order_history.php');
 }
 
-$stmt = $db->prepare("
+$stmt = db()->prepare("
     SELECT 
         oi.quantity,
         oi.unit_price,
         oi.subtotal,
         p.name,
         p.image_url
-    FROM order_item oi
+    FROM order_items oi
     JOIN products p ON p.product_id = oi.product_id
     WHERE oi.order_id = ?
 ");

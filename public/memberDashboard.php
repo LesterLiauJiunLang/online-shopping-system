@@ -140,13 +140,13 @@ try {
     <div class="dashboard-actions">
         <h3>Quick Links</h3>
         <div class="action-buttons">
-            <a href="products.php" class="btn btn-primary">Continue Shopping</a>
-            <a href="cart.php" class="btn btn-secondary">View Cart</a>
+            <a href="members/products.php" class="btn btn-primary">Continue Shopping</a>
+            <a href="members/cart.php" class="btn btn-secondary">View Cart</a>
             <a href="profile.php" class="btn btn-success">Edit Profile</a>
             
             <!-- Additional links from Practical 7 style -->
             <a href="change-password.php" class="btn btn-warning">Change Password</a>
-            <a href="shop.php" class="btn btn-primary">Browse Products</a>
+            <a href="../../members/products.php" class="btn btn-primary">Browse Products</a>
         </div>
     </div>
 
@@ -161,9 +161,9 @@ try {
             
             <!-- MEMBER-SPECIFIC LINKS -->    
             <?php if ($_user['role'] === 'member' || $_user['role'] === 'customer'): ?>
-                <li><a href="shop.php">Browse Products</a></li>
-                <li><a href="cart.php">Shopping Cart</a></li>
-                <li><a href="orders.php">My Orders</a></li>
+                <li><a href="members/products.php">Browse Products</a></li>
+                <li><a href="members/cart.php">Shopping Cart</a></li>
+                <li><a href="members/orders.php">My Orders</a></li>
                 <li><a href="wishlist.php">My Wishlist</a></li>
                 <li><a href="reviews.php">My Reviews</a></li>
             <?php endif; ?>

@@ -1,5 +1,7 @@
 <?php
-// lib/base.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 // ============================================================================
 // PHP Setups
 // ============================================================================
@@ -207,6 +209,12 @@ function html_radios($key, $items, $br = false) {
         }
     }
     echo '</div>';
+}
+
+// Generate <input type='search'>
+function html_search($key, $attr = '') {
+    $value = encode($GLOBALS[$key] ?? '');
+    echo "<input type='search' id='$key' name='$key' value='$value' $attr>";
 }
 
 function html_select($key, $items, $default = '- Select One -', $attr = '') {
@@ -497,4 +505,132 @@ function delete_old_photo($filename, $directory) {
 
 }
 
+/**
+ * Get all categories for dropdown
+ */
+function get_all_categories($db) {
+    $stmt = $db->query("SELECT category_id, name FROM category ORDER BY name");
+    $categories = $stmt->fetchAll();
+    
+    $category_options = [];
+    foreach ($categories as $cat) {
+        $category_options[$cat['category_id']] = $cat['name'];
+    }
+    
+    return $category_options;
+}
+
+/**
+ * Get filtered products based on search criteria
+ */
+function get_filtered_products($db, $name = '', $category_id = '', $min_price = null, $max_price = null) {
+    $sql = "SELECT p.*, c.name as category_name 
+            FROM products p 
+            LEFT JOIN category c ON p.category_id = c.category_id 
+            WHERE 1=1";
+    $params = [];
+
+    // Name filter
+    if (!empty($name)) {
+        $sql .= " AND (p.name LIKE ? OR p.description LIKE ?)";
+        $searchTerm = "%$name%";
+        $params[] = $searchTerm;
+        $params[] = $searchTerm;
+    }
+
+    // Category filter
+    if (!empty($category_id) && $category_id != 'All') {
+        $sql .= " AND p.category_id = ?";
+        $params[] = $category_id;
+    }
+
+    // Price filter
+    if (!empty($min_price)) {
+        $sql .= " AND p.price >= ?";
+        $params[] = $min_price;
+    }
+    if (!empty($max_price)) {
+        $sql .= " AND p.price <= ?";
+        $params[] = $max_price;
+    }
+
+    $sql .= " ORDER BY p.created_at DESC";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+
+
+// Function to get price range (add this to your database functions)
+function get_price_range($db) {
+    $stmt = $db->prepare("SELECT MIN(price) as min_price, MAX(price) as max_price FROM products");
+    $stmt->execute();
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Format price with RM currency
+ */
+function format_price($price) {
+    return 'RM ' . number_format($price, 2);
+}
+
+/**
+ * Get stock status class
+ */
+function get_stock_class($quantity) {
+    if ($quantity <= 0) {
+        return 'out-of-stock';
+    } elseif ($quantity <= 10) {
+        return 'low-stock';
+    }
+    return 'in-stock';
+}
+
+/**
+ * Get stock display text
+ */
+function get_stock_text($quantity) {
+    if ($quantity <= 0) {
+        return 'Out of Stock';
+    } elseif ($quantity <= 10) {
+        return "Low Stock: $quantity left";
+    }
+    return "In Stock: $quantity units";
+}
+
+/**
+ * Get product image URL (with fallback)
+ */
+function get_product_image($image) {
+    return !empty($image) ? $image : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+}
+
+// ============================================================================
+// Shopping Cart
+// ============================================================================
+
+
+function get_cart() {
+    return $_SESSION['cart'] ?? [];
+}
+
+function set_cart($cart = []) {
+    $_SESSION['cart'] = $cart;
+}
+
+function update_cart($id, $unit) {
+    $cart = get_cart();
+
+    if ($unit <= 0) {
+        unset($cart[$id]);
+    } else {
+        $cart[$id] = $unit;
+        ksort($cart); // sort by product id
+    }
+
+    set_cart($cart);
+}
 ?>

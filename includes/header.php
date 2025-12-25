@@ -201,9 +201,9 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
                             <a href="<?php echo $base_url; ?>/public/admin/users.php">Users</a>
                         </div>
                     <?php else: ?>
-                        <a href="<?php echo $base_url; ?>/public/dashboard.php">Dashboard</a>
-                        <a href="<?php echo $base_url; ?>/public/products.php">Shop</a>
-                        <a href="<?php echo $base_url; ?>/public/cart.php">Cart</a>
+                        <a href="<?php echo $base_url; ?>/public/members/dashboard.php">Dashboard</a>
+                        <a href="<?php echo $base_url; ?>/public/members/products.php">Shop</a>
+                        <a href="<?php echo $base_url; ?>/public/members/cart.php">Cart</a>
                     <?php endif; ?>
                     
                     <a href="<?php echo $base_url; ?>/public/logout.php" class="logout-btn">Logout</a>
