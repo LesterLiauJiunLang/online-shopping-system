@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../../app/models/_base.php';
+require __DIR__ . '/../../lib/base.php';
 
 // Check if user is logged in and is member
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION['role'] !== 'member') {
@@ -9,21 +9,29 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['logged_in']) || $_SESSION[
 
 require_once __DIR__ . '/../../app/config/config.php';
 require_once __DIR__ . '/../../app/config/database.php';
-//Database Connection===================================================
-$db = Database::getConnection();
 //Header================================================================
 require_once __DIR__ . "/../../includes/header.php";
 //Fetch all products====================================================
 
 $name = req('name'); 
-$category_name = req('category_name'); 
+$category_id = req('category_name'); 
+$min_price = req('min_price');
+$max_price = req('max_price');
 
+// Validate price range
+if (!empty($min_price) && !is_numeric($min_price)) {
+    $min_price = null;
+}
+if (!empty($max_price) && !is_numeric($max_price)) {
+    $max_price = null;
+}
 
-$_category = get_all_categories($db);
+$_category = get_all_categories(db());
 
+// Get price range for placeholders (min and max available prices)
+$price_range = get_price_range(db()); // You'll need to implement this function
 
-$products = get_filtered_products($db, $name, $category_name);
-
+$products = get_filtered_products(db(), $name, $category_id, $min_price, $max_price);
 ?>
 
 <!DOCTYPE html>
@@ -202,9 +210,32 @@ $products = get_filtered_products($db, $name, $category_name);
         <h2 class="section-title">Featured Products</h2>
 
        <form class="search-form">
+        <div class="form-group">
+          <label for="name">Product Name</label>
              <?= html_search('name') ?>
+        </div>
+           <div class="form-group">
+            <label for="category_name">Category</label> 
              <?= html_select('category_name', $_category, 'All') ?>
-             <button>Search</button>
+           </div>
+
+           <div class="form-group">
+            <label for="min_price">Min Price</label>
+            <input type="number" name="min_price" placeholder="0" value="<?= htmlspecialchars($min_price ?? '') ?>" min="0" step="0.01">
+           </div>
+
+           <div class="form-group">
+            <label for="max_price">Max Price</label>
+            <input type="number" name="max_price" placeholder="Any" value="<?= htmlspecialchars($max_price ?? '') ?>" min="0" step="0.01">
+           </div>
+
+
+             <div class="form-group">
+            <button type="submit">Search</button>
+            <?php if (!empty($name) || !empty($category_name) || !empty($min_price) || !empty($max_price)): ?>
+                    <a href="?" class="clear-btn" style="display: block; margin-top: 10px; text-align: center;">Clear Filters</a>
+            <?php endif; ?>
+        </div>
         </form>
 
         <div class="product-grid">

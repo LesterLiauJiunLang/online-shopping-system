@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../../app/models/_base.php';
+require __DIR__ . '/../../lib/base.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
     header("Location: ../login.php");
@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
 }
 
 require_once __DIR__ . '/../../app/config/database.php';
-$db = Database::getConnection();
+
 
 // ---------------------------------------------------------
 
@@ -16,13 +16,13 @@ if (is_post()) {
     $quantity   = (int) req('unit');
 
     if ($quantity <= 0) {
-        $stmt = $db->prepare("
+        $stmt = db()->prepare("
             DELETE FROM shopping_cart
             WHERE user_id = ? AND product_id = ?
         ");
         $stmt->execute([$_SESSION['user_id'], $product_id]);
     } else {
-        $stmt = $db->prepare("
+        $stmt = db()->prepare("
             INSERT INTO shopping_cart (user_id, product_id, quantity)
             VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE quantity = VALUES(quantity)
@@ -34,7 +34,7 @@ if (is_post()) {
 }
 
 $id   = req('id');
-$stmt = $db->prepare("
+$stmt = db()->prepare("
     SELECT p.*
     FROM products p
     WHERE p.product_id = ?
@@ -42,7 +42,7 @@ $stmt = $db->prepare("
 $stmt->execute([$id]);
 $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
-$stmt = $db->prepare("
+$stmt = db()->prepare("
     SELECT quantity
     FROM shopping_cart
     WHERE user_id = ? AND product_id = ?
