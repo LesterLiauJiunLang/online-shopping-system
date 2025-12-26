@@ -400,7 +400,7 @@ $_title = 'My Profile';
                 <?php endforeach; ?>
                 <?php if (count($member_stats['recent_orders']) > 0): ?>
                 <div style="text-align: center; margin-top: 15px;">
-                    <a href="orders.php" class="btn-verify" style="display: inline-flex; align-items: center; padding: 4px 12px;">
+                    <a href="members/order_history.php" class="btn-verify" style="display: inline-flex; align-items: center; padding: 4px 12px;">
                         <i class="fas fa-list"></i> View All Orders
                     </a>
                 </div>

@@ -74,35 +74,8 @@ $image_url = filter_var($product['image_url'] ?? '', FILTER_VALIDATE_URL)
 require_once __DIR__ . "/../../includes/header.php";
 ?>
 
-<style>
-    .detail-container {
-        max-width: 900px;
-        margin: 40px auto;
-        background: #fff;
-        padding: 30px;
-        border-radius: 8px;
-        display: grid;
-        grid-template-columns: 300px 1fr;
-        gap: 30px;
-    }
+    <link rel="stylesheet" href="../../assets/css/product.css">
 
-    .detail-img {
-        width: 300px;
-        height: 300px;
-        object-fit: cover;
-        border: 1px solid #ddd;
-    }
-
-    .detail-info h2 {
-        margin-bottom: 15px;
-    }
-
-    .detail-price {
-        font-size: 1.5rem;
-        color: #e44d26;
-        margin-bottom: 15px;
-    }
-</style>
 
 <div class="detail-container">
     <img src="<?= htmlspecialchars($image_url) ?>" class="detail-img">
@@ -113,25 +86,19 @@ require_once __DIR__ . "/../../includes/header.php";
     <form method="post">
         <input type="hidden" name="id" value="<?= $product['product_id'] ?>">
 
-    <?php if ($unit == 0): ?>
-         <input type="hidden" name="unit" value="1">
-           <button type="submit">Add to Cart</button>
-    <?php else: ?>
-        <label>
-            Quantity:
-            <?php html_select('unit', $_units, null); ?>
-        </label>
-            <button type="submit">Add to Cart</button>
-    <?php endif; ?>
-       
-        </form>
-
         <?php if (!empty($product['description'])): ?>
             <p><?= nl2br(htmlspecialchars($product['description'])) ?></p>
         <?php endif; ?>
 
+        <label>
+            Quantity:
+            <?php html_select('unit', $_units); ?>
+        </label>
+            <button type="submit" class="add-cart-btn">Add to Cart</button>
+        </form>
+
         <p>
-            <button data-get="products.php">Back to Products</button>
+            <button data-get="products.php" class="back-btn">Back to Products</button>
         </p>
     </div>
 </div>
@@ -142,15 +109,6 @@ document.querySelectorAll('[data-get]').forEach(btn => {
         window.location.href = btn.dataset.get;
     });
 });
-
-/* Back button */
-document.querySelectorAll('[data-get]').forEach(btn => {
-    btn.addEventListener('click', () => {
-        window.location.href = btn.dataset.get;
-    });
-});
-
-
 </script>
 
 <?php require_once __DIR__ . "/../../includes/footer.php"; ?>
