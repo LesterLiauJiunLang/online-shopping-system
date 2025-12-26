@@ -35,8 +35,13 @@ if (is_post()) {
 
 $id   = req('id');
 $stmt = db()->prepare("
-    SELECT p.*
+     SELECT 
+        p.*,
+        COALESCE(pi.file_path, p.image_url) AS image_url
     FROM products p
+    LEFT JOIN product_image pi
+        ON pi.product_id = p.product_id
+        AND pi.sort_order = 0
     WHERE p.product_id = ?
 ");
 $stmt->execute([$id]);
@@ -67,9 +72,13 @@ $_units = array_combine(range(1, 10), range(1, 10));
 
 // ---------------------------------------------------------
 
-$image_url = filter_var($product['image_url'] ?? '', FILTER_VALIDATE_URL)
-    ? $product['image_url']
-    : 'https://via.placeholder.com/300x300?text=No+Image';
+// Image handling
+$image_url = $product['image_url'] ?? '/assets/img/no-image.png';
+if (!preg_match('/^https?:\/\//i', $image_url)) {
+    $image_url = '/' . ltrim($image_url, '/');
+    $image_url = str_replace([' ', '(', ')'], ['%20', '%28', '%29'], $image_url);
+}
+
 
 require_once __DIR__ . "/../../includes/header.php";
 ?>

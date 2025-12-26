@@ -165,7 +165,7 @@ try {
                 <li><a href="members/cart.php">Shopping Cart</a></li>
                 <li><a href="members/orders.php">My Orders</a></li>
                 <li><a href="members/wishlist.php">My Wishlist</a></li>
-                <li><a href="reviews.php">My Reviews</a></li>
+                <li><a href="members/reviews.php">My Reviews</a></li>
             <?php endif; ?>
             
             <!-- MORE COMMON LINKS -->
