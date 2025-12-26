@@ -164,7 +164,7 @@ try {
                 <li><a href="members/products.php">Browse Products</a></li>
                 <li><a href="members/cart.php">Shopping Cart</a></li>
                 <li><a href="members/orders.php">My Orders</a></li>
-                <li><a href="wishlist.php">My Wishlist</a></li>
+                <li><a href="members/wishlist.php">My Wishlist</a></li>
                 <li><a href="reviews.php">My Reviews</a></li>
             <?php endif; ?>
             
@@ -278,7 +278,7 @@ try {
                             </td>
                             <td><?php echo date('d/m/Y', strtotime($order['created_at'] ?? $order['order_date'] ?? '')); ?></td>
                             <td>
-                                <a href="order_details.php?id=<?php echo $order['order_id']; ?>" class="btn btn-primary btn-sm">View Details</a>
+                                <a href="members/order_detail.php?id=<?php echo $order['order_id']; ?>" class="btn btn-primary btn-sm">View Details</a>
                             </td>
                         </tr>
                     <?php 
@@ -289,7 +289,7 @@ try {
             
             <?php if (count($orders) > 5): ?>
                 <div class="view-all">
-                    <a href="order_history.php" class="btn-orange">View All Orders</a>
+                    <a href="members/order_history.php" class="btn-orange">View All Orders</a>
                 </div>
             <?php endif; ?>
         <?php endif; ?>

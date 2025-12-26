@@ -70,6 +70,20 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
 } else {
     $img_url = $fallback_url;
 }
+
+if (isset($_SESSION['user_id'])) {
+    $stmt = db()->prepare("
+        SELECT SUM(quantity) as total_items 
+        FROM shopping_cart 
+        WHERE user_id = ?
+    ");
+    $stmt->execute([$_SESSION['user_id']]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $cart_count = $result['total_items'] ?? 0;
+} else {
+    $cart_count = 0;
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -201,9 +215,14 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
                             <a href="<?php echo $base_url; ?>/public/admin/users.php">Users</a>
                         </div>
                     <?php else: ?>
-                        <a href="<?php echo $base_url; ?>/public/members/dashboard.php">Dashboard</a>
+                        <a href="<?php echo $base_url; ?>/public/memberDashboard.php">Dashboard</a>
                         <a href="<?php echo $base_url; ?>/public/members/products.php">Shop</a>
-                        <a href="<?php echo $base_url; ?>/public/members/cart.php">Cart</a>
+                        <a href="<?php echo $base_url; ?>/public/members/cart.php">
+                             🛒 Cart 
+                             <?php if ($cart_count > 0): ?>
+                               <span class="cart-count"><?= $cart_count ?></span>
+                             <?php endif; ?>
+                        </a>
                     <?php endif; ?>
                     
                     <a href="<?php echo $base_url; ?>/public/logout.php" class="logout-btn">Logout</a>
