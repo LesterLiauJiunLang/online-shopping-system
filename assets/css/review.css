@@ -1,0 +1,42 @@
+.reviews-container {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 10px;
+}
+
+.review-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.review-header {
+    font-size: 0.95rem;
+    margin-bottom: 5px;
+}
+
+.review-rating {
+    color: #e44d26;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.review-comment {
+    margin-bottom: 10px;
+}
+
+.review-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.review-image {
+    max-width: 120px;
+    max-height: 120px;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}

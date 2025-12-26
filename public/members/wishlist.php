@@ -19,7 +19,7 @@ $wishlist_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="../../assets/css/cart.css">
+<link rel="stylesheet" href="../../assets/css/wishlist.css">
 
 <div class="cart-container">
     <h2 class="checkout-title">My Wishlist</h2>
@@ -31,7 +31,7 @@ require_once __DIR__ . '/../../includes/header.php';
         <div class="cart-items">
             <?php foreach ($wishlist_items as $item): ?>
                 <div class="cart-item">
-                    <img src="../../assets/uploads/<?= encode($item['image_url']) ?>" alt="" class="cart-item-img">
+                    <img src="<?= encode($item['image_url']) ?>" alt="<?= encode($item['name']) ?>" class="cart-item-img">
 
                     <div class="cart-item-info">
                         <h4><?= encode($item['name']) ?></h4>
@@ -39,7 +39,7 @@ require_once __DIR__ . '/../../includes/header.php';
                         
                         <div class="cart-actions">
                             <a href="wishlist_remove.php?product_id=<?= $item['product_id'] ?>" class="remove-btn">Remove</a>
-                            <a href="product_detail.php?id=<?= $item['product_id'] ?>" class="add-cart-btn">View Product</a>
+                            <a href="products_detail.php?id=<?= $item['product_id'] ?>" class="add-cart-btn">View Product</a>
                         </div>
                     </div>
                 </div>
