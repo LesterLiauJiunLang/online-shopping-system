@@ -486,6 +486,9 @@ try {
             <a href="members/cart.php" class="btn btn-secondary">
                 <i class="fas fa-shopping-cart"></i> View Cart
             </a>
+            <a href="members/wishlist.php" class="btn btn-info">
+                <i class="fas fa-shopping-cart"></i> View WishList
+            </a>
             <a href="profile.php" class="btn btn-success">
                 <i class="fas fa-user-edit"></i> Edit Profile
             </a>
