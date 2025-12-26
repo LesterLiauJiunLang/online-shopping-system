@@ -145,7 +145,7 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'Thank you for your rating!',
-        'redirect' => '../../notifications.php',
+        'redirect' => '../notifications.php',
         'rating_id' => $rating_id
     ]);
     

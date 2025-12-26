@@ -139,7 +139,7 @@ if ($auth->isLoggedIn()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($page_title) ? $page_title : 'Online Shopping System'; ?></title>
+    <title><?php echo isset($page_title) ? $page_title : 'GadgetMart'; ?></title>
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/style.css">
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/auth.css">
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/admin.css">
@@ -432,7 +432,7 @@ if ($auth->isLoggedIn()) {
     
     <div class="header">
         <div class="logo">
-            <a href="<?php echo $base_url; ?>/public/index.php">🛒 GadgetMart </a>
+            <a href="<?php echo $base_url; ?>/public/index.php">🛒 GadgetMart</a>
         </div>
         <div class="nav-links">
             <?php if ($auth->isLoggedIn()): ?>
@@ -464,7 +464,7 @@ if ($auth->isLoggedIn()) {
                     <?php if ($auth->isAdmin()): ?>
                         <!-- ADMIN MENU -->
                         <div class="admin-menu">
-                            <a href="<?php echo $base_url; ?>/public/admin/dashboard.php">Dashboard</a>
+                            <a href="<?php echo $base_url; ?>/public/adminDashboard.php">Dashboard</a>
                             <a href="<?php echo $base_url; ?>/public/admin/products.php">Products</a>
                             <a href="<?php echo $base_url; ?>/public/admin/product_add.php">Add Product</a>
                             <a href="<?php echo $base_url; ?>/public/admin/orders.php">Orders</a>
@@ -485,7 +485,6 @@ if ($auth->isLoggedIn()) {
                                 <?php endif; ?>
                             </a>
                             <a href="<?php echo $base_url; ?>/public/support/tickets.php?status=resolved">Resolved</a>
-                            <a href="<?php echo $base_url; ?>/public/support/customers.php">Customers</a>
                             <a href="<?php echo $base_url; ?>/public/admin/support_chat.php">Chat</a>
                         </div>
                         

@@ -645,7 +645,7 @@ function update_cart($id, $unit) {
 }
 
 // ============================================================================
-// NOTIFICATION HELPERS
+// Notification helper
 // ============================================================================
 
 function createNotification($user_id, $type, $title, $message, $related_id = null) {
@@ -799,10 +799,12 @@ function notifySupportReply($ticket_id, $sender_id, $message) {
 }
 
 // ============================================================================
-// SUPPORT FUNCTIONS
+// Support Management Functions
 // ============================================================================
 
-// Support Management Functions
+/**
+ * Get support agents with pagination
+ */
 function get_support_agents($limit = 10, $offset = 0) {
     global $_db;
     try {
@@ -822,6 +824,9 @@ function get_support_agents($limit = 10, $offset = 0) {
     }
 }
 
+/**
+ * Get total number of support agents
+ */
 function get_support_agents_count() {
     global $_db;
     try {
@@ -837,6 +842,9 @@ function get_support_agents_count() {
     }
 }
 
+/**
+ * Search support agents
+ */
 function search_support_agents($search, $limit = 10, $offset = 0) {
     global $_db;
     try {
@@ -863,6 +871,9 @@ function search_support_agents($search, $limit = 10, $offset = 0) {
     }
 }
 
+/**
+ * Update user status (active/inactive)
+ */
 function update_user_status($userId, $status) {
     global $_db;
     try {
@@ -878,6 +889,9 @@ function update_user_status($userId, $status) {
     }
 }
 
+/**
+ * Count active support agents
+ */
 function count_active_support_agents() {
     global $_db;
     try {
@@ -895,6 +909,9 @@ function count_active_support_agents() {
     }
 }
 
+/**
+ * Get user activities
+ */
 function get_user_activities($userId, $limit = 10) {
     global $_db;
     try {
@@ -914,6 +931,9 @@ function get_user_activities($userId, $limit = 10) {
     }
 }
 
+/**
+ * Get support agent statistics
+ */
 function get_support_agent_stats($agentId) {
     global $_db;
     try {
@@ -947,6 +967,9 @@ function get_support_agent_stats($agentId) {
     }
 }
 
+/**
+ * Get total assigned tickets
+ */
 function get_total_assigned_tickets() {
     global $_db;
     try {
@@ -964,6 +987,9 @@ function get_total_assigned_tickets() {
     }
 }
 
+/**
+ * Get open tickets count
+ */
 function get_open_tickets_count() {
     global $_db;
     try {
@@ -981,6 +1007,9 @@ function get_open_tickets_count() {
     }
 }
 
+/**
+ * Get total resolved tickets
+ */
 function get_total_resolved_tickets() {
     global $_db;
     try {
@@ -998,6 +1027,9 @@ function get_total_resolved_tickets() {
     }
 }
 
+/**
+ * Get recent support tickets assigned to agent
+ */
 function get_agent_recent_tickets($agentId, $limit = 5) {
     global $_db;
     try {
@@ -1019,6 +1051,9 @@ function get_agent_recent_tickets($agentId, $limit = 5) {
     }
 }
 
+/**
+ * Get user by ID
+ */
 function get_user_by_id($userId) {
     global $_db;
     try {
@@ -1031,6 +1066,9 @@ function get_user_by_id($userId) {
     }
 }
 
+/**
+ * Get user by email
+ */
 function get_user_by_email($email) {
     global $_db;
     try {
@@ -1043,6 +1081,9 @@ function get_user_by_email($email) {
     }
 }
 
+/**
+ * Get user by username
+ */
 function get_user_by_username($username) {
     global $_db;
     try {
@@ -1055,6 +1096,9 @@ function get_user_by_username($username) {
     }
 }
 
+/**
+ * Get total customers count
+ */
 function get_total_customers_count() {
     global $_db;
     try {
@@ -1068,6 +1112,9 @@ function get_total_customers_count() {
     }
 }
 
+/**
+ * Get total orders count
+ */
 function get_total_orders_count() {
     global $_db;
     try {
@@ -1081,6 +1128,9 @@ function get_total_orders_count() {
     }
 }
 
+/**
+ * Get total revenue
+ */
 function get_total_revenue() {
     global $_db;
     try {
@@ -1094,6 +1144,9 @@ function get_total_revenue() {
     }
 }
 
+/**
+ * Get total products count
+ */
 function get_total_products_count() {
     global $_db;
     try {
@@ -1107,6 +1160,9 @@ function get_total_products_count() {
     }
 }
 
+/**
+ * Get recent orders
+ */
 function get_recent_orders($limit = 10) {
     global $_db;
     try {
@@ -1126,6 +1182,9 @@ function get_recent_orders($limit = 10) {
     }
 }
 
+/**
+ * Get low stock products
+ */
 function get_low_stock_products($threshold = 10) {
     global $_db;
     try {
@@ -1144,27 +1203,15 @@ function get_low_stock_products($threshold = 10) {
     }
 }
 
-/*
-function log_user_activity($userId, $activityType, $description, $ipAddress = null) {
-    global $_db;
-    try {
-        $ipAddress = $ipAddress ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $stmt = $_db->prepare("
-            INSERT INTO user_activity (user_id, activity_type, description, ip_address) 
-            VALUES (?, ?, ?, ?)
-        ");
-        return $stmt->execute([$userId, $activityType, $description, $ipAddress]);
-    } catch (Exception $e) {
-        error_log("Log activity error: " . $e->getMessage());
-        return false;
-    }
-}
-*/
+
 
 // ============================================================================
-// Helpers 
+// Database Helper Functions (for manage_support.php)
 // ============================================================================
 
+/**
+ * Get pagination data
+ */
 function get_pagination_data($totalItems, $itemsPerPage, $currentPage) {
     $totalPages = ceil($totalItems / $itemsPerPage);
     $currentPage = max(1, min($currentPage, $totalPages));
@@ -1182,6 +1229,9 @@ function get_pagination_data($totalItems, $itemsPerPage, $currentPage) {
     ];
 }
 
+/**
+ * Generate pagination links
+ */
 function generate_pagination_links($currentPage, $totalPages, $baseUrl = '', $search = '') {
     $queryParams = [];
     if ($search) {
@@ -1219,6 +1269,9 @@ function generate_pagination_links($currentPage, $totalPages, $baseUrl = '', $se
     return $html;
 }
 
+/**
+ * Generate user status badge HTML
+ */
 function get_user_status_badge($isActive) {
     if ($isActive) {
         return '<span class="badge bg-success">Active</span>';
@@ -1227,6 +1280,9 @@ function get_user_status_badge($isActive) {
     }
 }
 
+/**
+ * Generate profile image HTML
+ */
 function get_profile_image_html($profilePhoto, $username, $size = 32) {
     if (!empty($profilePhoto)) {
         return '<img src="../' . encode($profilePhoto) . '" 
@@ -1242,6 +1298,9 @@ function get_profile_image_html($profilePhoto, $username, $size = 32) {
     }
 }
 
+/**
+ * Format last login date
+ */
 function format_last_login($lastLogin) {
     if ($lastLogin) {
         return date('M d, Y', strtotime($lastLogin)) . 
@@ -1252,6 +1311,9 @@ function format_last_login($lastLogin) {
     }
 }
 
+/**
+ * Get activity type badge
+ */
 function get_activity_type_badge($activityType) {
     $badgeClasses = [
         'profile_update' => 'bg-primary',
@@ -1267,6 +1329,9 @@ function get_activity_type_badge($activityType) {
     return '<span class="badge ' . $class . '">' . encode($activityType) . '</span>';
 }
 
+/**
+ * Get user activities with pagination
+ */
 function get_user_activities_paginated($userId, $limit = 10, $offset = 0) {
     global $_db;
     try {
@@ -1287,6 +1352,9 @@ function get_user_activities_paginated($userId, $limit = 10, $offset = 0) {
     }
 }
 
+/**
+ * Count user activities
+ */
 function count_user_activities($userId) {
     global $_db;
     try {
@@ -1301,9 +1369,12 @@ function count_user_activities($userId) {
 }
 
 // ============================================================================
-// support helpers 
+// Support Agent Functions (for manage_support.php with filtering)
 // ============================================================================
 
+/**
+ * Get support agents count with filters
+ */
 function get_support_agents_count_filtered($search = '', $status = 'all') {
     global $_db;
     
@@ -1339,6 +1410,9 @@ function get_support_agents_count_filtered($search = '', $status = 'all') {
     }
 }
 
+/**
+ * Get support agents with filters and sorting
+ */
 function get_support_agents_filtered($limit = 20, $offset = 0, $search = '', $status = 'all', $sort = 'newest') {
     global $_db;
     
@@ -1411,6 +1485,9 @@ function get_support_agents_filtered($limit = 20, $offset = 0, $search = '', $st
     }
 }
 
+/**
+ * Build query string with existing parameters (updated version)
+ */
 function build_query_global($new_params = []) {
     $query = array_merge($_GET, $new_params);
     // Remove empty values
@@ -1420,6 +1497,9 @@ function build_query_global($new_params = []) {
     return http_build_query($query);
 }
 
+/**
+ * Remove a query parameter from current URL (updated version)
+ */
 function remove_query_param_global($param) {
     $query = $_GET;
     unset($query[$param]);
@@ -1433,6 +1513,39 @@ function remove_query_param_global($param) {
     return '?' . http_build_query($query);
 }
 
+/**
+ * Count active support agents (alternative version)
+ */
+function count_active_support_agents_filtered($search = '') {
+    global $_db;
+    
+    $where_conditions = ["role = 'support'", "is_active = 1"];
+    $params = [];
+    
+    if (!empty($search)) {
+        $where_conditions[] = "(username LIKE ? OR email LIKE ? OR employee_id LIKE ?)";
+        $search_param = "%$search%";
+        $params[] = $search_param;
+        $params[] = $search_param;
+        $params[] = $search_param;
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    
+    try {
+        $stmt = $_db->prepare("SELECT COUNT(*) as count FROM users WHERE $where_clause");
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Count active support agents error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Count inactive support agents (new function)
+ */
 function count_inactive_support_agents_filtered($search = '') {
     global $_db;
     
@@ -1460,6 +1573,9 @@ function count_inactive_support_agents_filtered($search = '') {
     }
 }
 
+/**
+ * Get support agent stats with filters
+ */
 function get_support_agent_stats_filtered($agentId, $date_from = null, $date_to = null) {
     global $_db;
     
@@ -1513,6 +1629,9 @@ function get_support_agent_stats_filtered($agentId, $date_from = null, $date_to 
     }
 }
 
+/**
+ * Get monthly performance for a support agent
+ */
 function get_agent_monthly_performance($agentId, $months = 6) {
     global $_db;
     
@@ -1556,6 +1675,9 @@ function get_agent_monthly_performance($agentId, $months = 6) {
     }
 }
 
+/**
+ * Get all support agents for dropdown
+ */
 function get_all_support_agents_for_dropdown($only_active = true) {
     global $_db;
     
@@ -1592,6 +1714,9 @@ function get_all_support_agents_for_dropdown($only_active = true) {
     }
 }
 
+/**
+ * Get recently assigned tickets to support agents
+ */
 function get_recently_assigned_tickets($limit = 10) {
     global $_db;
     try {
@@ -1618,8 +1743,103 @@ function get_recently_assigned_tickets($limit = 10) {
 }
 
 // ============================================================================
-// Notification Count
+// New HTML Helper Functions (Add to base.php)
 // ============================================================================
+
+/**
+ * Start a form
+ */
+function form_start($id = '', $method = 'POST', $action = '', $attributes = []) {
+    $method = strtoupper($method);
+    $action = $action ?: $_SERVER['PHP_SELF'];
+    
+    $attr_string = '';
+    foreach ($attributes as $key => $value) {
+        $attr_string .= " $key=\"$value\"";
+    }
+    
+    return "<form id=\"$id\" method=\"$method\" action=\"$action\"$attr_string>";
+}
+
+/**
+ * End a form
+ */
+function form_end() {
+    return '</form>';
+}
+
+/**
+ * Create a hidden input field
+ */
+function hidden_field($name, $value = '', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    $value = encode($value);
+    return "<input type=\"hidden\" name=\"$name\" value=\"$value\"$attr_string>";
+}
+
+/**
+ * Create a textarea field
+ */
+function textarea_field($name, $value = '', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    $value = encode($value);
+    return "<textarea name=\"$name\"$attr_string>$value</textarea>";
+}
+
+/**
+ * Create a submit button
+ */
+function submit_button($text = 'Submit', $name = 'submit', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    return "<button type=\"submit\" name=\"$name\"$attr_string>$text</button>";
+}
+
+/**
+ * Create a generic button
+ */
+function button($text, $type = 'button', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    return "<button type=\"$type\"$attr_string>$text</button>";
+}
+
+/**
+ * Create a select dropdown
+ */
+function select_field($name, $options, $selected = '', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    $html = "<select name=\"$name\"$attr_string>";
+    foreach ($options as $value => $label) {
+        $is_selected = ($value == $selected) ? ' selected' : '';
+        $html .= "<option value=\"$value\"$is_selected>$label</option>";
+    }
+    $html .= '</select>';
+    
+    return $html;
+}
+
+/**
+ * Get unread chat notification count for header
+ */
 function get_unread_chat_notifications_count($user_id) {
     global $_db;
     try {
@@ -1639,6 +1859,9 @@ function get_unread_chat_notifications_count($user_id) {
     }
 }
 
+/**
+ * Get total unread notifications for user
+ */
 function get_total_unread_notifications($user_id) {
     global $_db;
     try {
@@ -1655,80 +1878,6 @@ function get_total_unread_notifications($user_id) {
         error_log("Get total unread notifications error: " . $e->getMessage());
         return 0;
     }
-}
-
-// ============================================================================
-// Extra 
-// ============================================================================
-
-function form_start($id = '', $method = 'POST', $action = '', $attributes = []) {
-    $method = strtoupper($method);
-    $action = $action ?: $_SERVER['PHP_SELF'];
-    
-    $attr_string = '';
-    foreach ($attributes as $key => $value) {
-        $attr_string .= " $key=\"$value\"";
-    }
-    
-    return "<form id=\"$id\" method=\"$method\" action=\"$action\"$attr_string>";
-}
-
-function form_end() {
-    return '</form>';
-}
-
-function hidden_field($name, $value = '', $attributes = []) {
-    $attr_string = '';
-    foreach ($attributes as $key => $val) {
-        $attr_string .= " $key=\"$val\"";
-    }
-    
-    $value = encode($value);
-    return "<input type=\"hidden\" name=\"$name\" value=\"$value\"$attr_string>";
-}
-
-function textarea_field($name, $value = '', $attributes = []) {
-    $attr_string = '';
-    foreach ($attributes as $key => $val) {
-        $attr_string .= " $key=\"$val\"";
-    }
-    
-    $value = encode($value);
-    return "<textarea name=\"$name\"$attr_string>$value</textarea>";
-}
-
-function submit_button($text = 'Submit', $name = 'submit', $attributes = []) {
-    $attr_string = '';
-    foreach ($attributes as $key => $val) {
-        $attr_string .= " $key=\"$val\"";
-    }
-    
-    return "<button type=\"submit\" name=\"$name\"$attr_string>$text</button>";
-}
-
-function button($text, $type = 'button', $attributes = []) {
-    $attr_string = '';
-    foreach ($attributes as $key => $val) {
-        $attr_string .= " $key=\"$val\"";
-    }
-    
-    return "<button type=\"$type\"$attr_string>$text</button>";
-}
-
-function select_field($name, $options, $selected = '', $attributes = []) {
-    $attr_string = '';
-    foreach ($attributes as $key => $val) {
-        $attr_string .= " $key=\"$val\"";
-    }
-    
-    $html = "<select name=\"$name\"$attr_string>";
-    foreach ($options as $value => $label) {
-        $is_selected = ($value == $selected) ? ' selected' : '';
-        $html .= "<option value=\"$value\"$is_selected>$label</option>";
-    }
-    $html .= '</select>';
-    
-    return $html;
 }
 
 ?>

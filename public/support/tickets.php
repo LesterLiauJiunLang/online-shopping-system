@@ -27,6 +27,7 @@ $is_admin = ($user_role === 'admin');
 $status = $_GET['status'] ?? 'active';
 $search = $_GET['search'] ?? '';
 $agent_id = isset($_GET['agent']) ? (int)$_GET['agent'] : null;
+$sort = $_GET['sort'] ?? 'newest'; // NEW: Added sort parameter
 
 // Build base query
 $query = "SELECT DISTINCT t.*, 
@@ -79,14 +80,35 @@ if (!empty($search)) {
     }
 }
 
-// Order by priority and date
-$query .= " ORDER BY 
-    CASE t.priority 
-        WHEN 'urgent' THEN 1
-        WHEN 'high' THEN 2
-        WHEN 'medium' THEN 3
-        WHEN 'low' THEN 4
-    END, t.created_at DESC";
+// NEW: Sorting logic
+switch ($sort) {
+    case 'oldest':
+        $query .= " ORDER BY t.created_at ASC";
+        break;
+    case 'newest':
+        $query .= " ORDER BY t.created_at DESC";
+        break;
+    case 'priority_asc':
+        $query .= " ORDER BY 
+            CASE t.priority 
+                WHEN 'urgent' THEN 1
+                WHEN 'high' THEN 2
+                WHEN 'medium' THEN 3
+                WHEN 'low' THEN 4
+            END ASC, t.created_at DESC";
+        break;
+    case 'priority_desc':
+        $query .= " ORDER BY 
+            CASE t.priority 
+                WHEN 'urgent' THEN 1
+                WHEN 'high' THEN 2
+                WHEN 'medium' THEN 3
+                WHEN 'low' THEN 4
+            END DESC, t.created_at DESC";
+        break;
+    default:
+        $query .= " ORDER BY t.created_at DESC";
+}
 
 // Prepare and execute query
 $stmt = $db->prepare($query);
@@ -303,6 +325,45 @@ $base_url = '/online-shopping-system';
             align-items: center;
             gap: 10px;
             font-size: 18px;
+        }
+        
+        .filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        .sort-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+        }
+        
+        .sort-label {
+            color: #4a5568;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .sort-select {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #2d3748;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+            min-width: 150px;
+        }
+        
+        .sort-select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
         }
         
         .filter-tabs {
@@ -1124,32 +1185,46 @@ $base_url = '/online-shopping-system';
                 <h3><i class="fas fa-filter"></i> Filter Tickets</h3>
             </div>
             
-            <!-- Status Tabs -->
-            <div class="filter-tabs">
-                <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=all'; ?>" 
-                   class="filter-tab <?php echo $status === 'all' ? 'active' : ''; ?>">
-                    <i class="fas fa-layer-group"></i> All
-                </a>
-                <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=active'; ?>" 
-                   class="filter-tab <?php echo $status === 'active' ? 'active' : ''; ?>">
-                    <i class="fas fa-clock"></i> Active
-                </a>
-                <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=open'; ?>" 
-                   class="filter-tab <?php echo $status === 'open' ? 'active' : ''; ?>">
-                    <i class="fas fa-exclamation-circle"></i> Open
-                </a>
-                <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=in_progress'; ?>" 
-                   class="filter-tab <?php echo $status === 'in_progress' ? 'active' : ''; ?>">
-                    <i class="fas fa-spinner"></i> In Progress
-                </a>
-                <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=resolved'; ?>" 
-                   class="filter-tab <?php echo $status === 'resolved' ? 'active' : ''; ?>">
-                    <i class="fas fa-check-circle"></i> Resolved
-                </a>
-                <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=closed'; ?>" 
-                   class="filter-tab <?php echo $status === 'closed' ? 'active' : ''; ?>">
-                    <i class="fas fa-times-circle"></i> Closed
-                </a>
+            <!-- NEW: Filter Controls with Sorting -->
+            <div class="filter-controls">
+                <!-- Status Tabs -->
+                <div class="filter-tabs">
+                    <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=all&sort=' . $sort; ?>" 
+                       class="filter-tab <?php echo $status === 'all' ? 'active' : ''; ?>">
+                        <i class="fas fa-layer-group"></i> All
+                    </a>
+                    <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=active&sort=' . $sort; ?>" 
+                       class="filter-tab <?php echo $status === 'active' ? 'active' : ''; ?>">
+                        <i class="fas fa-clock"></i> Active
+                    </a>
+                    <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=open&sort=' . $sort; ?>" 
+                       class="filter-tab <?php echo $status === 'open' ? 'active' : ''; ?>">
+                        <i class="fas fa-exclamation-circle"></i> Open
+                    </a>
+                    <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=in_progress&sort=' . $sort; ?>" 
+                       class="filter-tab <?php echo $status === 'in_progress' ? 'active' : ''; ?>">
+                        <i class="fas fa-spinner"></i> In Progress
+                    </a>
+                    <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=resolved&sort=' . $sort; ?>" 
+                       class="filter-tab <?php echo $status === 'resolved' ? 'active' : ''; ?>">
+                        <i class="fas fa-check-circle"></i> Resolved
+                    </a>
+                    <a href="?<?php echo ($agent_id ? "agent=$agent_id&" : '') . 'status=closed&sort=' . $sort; ?>" 
+                       class="filter-tab <?php echo $status === 'closed' ? 'active' : ''; ?>">
+                        <i class="fas fa-times-circle"></i> Closed
+                    </a>
+                </div>
+                
+                <!-- NEW: Sort Dropdown -->
+                <div class="sort-container">
+                    <span class="sort-label">Sort by:</span>
+                    <select class="sort-select" id="sortSelect" onchange="changeSort(this.value)">
+                        <option value="newest" <?php echo $sort === 'newest' ? 'selected' : ''; ?>>Newest First</option>
+                        <option value="oldest" <?php echo $sort === 'oldest' ? 'selected' : ''; ?>>Oldest First</option>
+                        <option value="priority_asc" <?php echo $sort === 'priority_asc' ? 'selected' : ''; ?>>Priority (Low to High)</option>
+                        <option value="priority_desc" <?php echo $sort === 'priority_desc' ? 'selected' : ''; ?>>Priority (High to Low)</option>
+                    </select>
+                </div>
             </div>
             
             <!-- Search Form -->
@@ -1157,12 +1232,13 @@ $base_url = '/online-shopping-system';
                 <?php if ($agent_id): ?>
                     <input type="hidden" name="agent" value="<?php echo $agent_id; ?>">
                 <?php endif; ?>
+                <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sort); ?>">
                 <input type="text" name="search" placeholder="Search by ticket ID, subject, customer name, or email..." 
                        value="<?php echo htmlspecialchars($search); ?>">
                 <button type="submit">
                     <i class="fas fa-search"></i> Search
                 </button>
-                <?php if (!empty($search) || $status !== 'active'): ?>
+                <?php if (!empty($search) || $status !== 'active' || $sort !== 'newest'): ?>
                     <a href="?<?php echo $agent_id ? "agent=$agent_id" : ''; ?>" class="clear-search">
                         <i class="fas fa-times"></i> Clear
                     </a>
@@ -1356,6 +1432,13 @@ $base_url = '/online-shopping-system';
         // Initialize notification polling
         initNotificationPolling();
     });
+    
+    // NEW: Function to change sort
+    function changeSort(sortValue) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('sort', sortValue);
+        window.location.search = urlParams.toString();
+    }
     
     // Open assign modal
     function openAssignModal(ticketId, assignedAgentId, assignedAgentName) {

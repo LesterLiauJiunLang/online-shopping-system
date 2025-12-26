@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_register'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - Online Shopping System</title>
+    <title>Register - GadgetMart </title>
     
     <!-- External CSS Files -->
     <link rel="stylesheet" href="../assets/css/notifications.css">
@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_register'])) {
 <body>
     <!-- Header -->
     <div class="auth-header">
-        <h1>Online Shopping System</h1>
+        <h1>GadgetMart</h1>
         <p>Create Your Account</p>
     </div>
     

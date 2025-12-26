@@ -7,7 +7,6 @@ if (session_status() === PHP_SESSION_NONE) {
 // Include base.php which contains all our functions
 require_once __DIR__ . '/../../lib/base.php';
 require_once __DIR__ . '/../../lib/auth.php';
-
 // Check if user is admin
 require_login();
 $user_role = $_SESSION['user']['role'] ?? $_SESSION['role'] ?? 'member';
