@@ -19,13 +19,26 @@ if (!in_array($sort_field, $allowed_fields)) $sort_field = 'order_date';
 if (!in_array(strtolower($sort_order), $allowed_orders)) $sort_order = 'desc';
 
 $sort_order_upper = strtoupper($sort_order);
+// --- Pagination Setup ---
+$limit = 10; // Show 10 orders per page
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? intval($_GET['page']) : 1;
+if ($page < 1) $page = 1;
 
-// --- Fetch orders ---
+// Count total orders for pagination
+$countStmt = db()->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
+$countStmt->execute([$_SESSION['user_id']]);
+$total_orders = $countStmt->fetchColumn();
+
+$total_pages = ceil($total_orders / $limit);
+$offset = ($page - 1) * $limit;
+
+// --- Fetch orders with sorting & pagination ---
 $stmt = db()->prepare("
     SELECT *
     FROM orders
     WHERE user_id = ?
     ORDER BY $sort_field $sort_order_upper
+    LIMIT $limit OFFSET $offset
 ");
 $stmt->execute([$_SESSION['user_id']]);
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -37,6 +50,40 @@ require_once __DIR__ . "/../../includes/header.php";
 
 <div class="order-history-container">
     <h2 class="order-history-title">My Orders</h2>
+
+    <?php if ($total_pages > 1): ?>
+<nav class="pagination">
+
+    <!-- Prev Button (disabled if first page) -->
+    <span class="page-btn <?= ($page <= 1) ? 'disabled' : '' ?>">
+        <?php if ($page > 1): ?>
+            <a href="?page=<?= $page - 1 ?>&field=<?= $sort_field ?>&order=<?= $sort_order ?>">« Prev</a>
+        <?php else: ?>
+            « Prev
+        <?php endif; ?>
+    </span>
+
+    <!-- Numbered Pages -->
+    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+        <a class="page-number <?= $i == $page ? 'active' : '' ?>"
+           href="?page=<?= $i ?>&field=<?= $sort_field ?>&order=<?= $sort_order ?>">
+           <?= $i ?>
+        </a>
+    <?php endfor; ?>
+
+    <!-- Next Button (disabled if last page) -->
+    <span class="page-btn <?= ($page >= $total_pages) ? 'disabled' : '' ?>">
+        <?php if ($page < $total_pages): ?>
+            <a href="?page=<?= $page + 1 ?>&field=<?= $sort_field ?>&order=<?= $sort_order ?>">Next »</a>
+        <?php else: ?>
+            Next »
+        <?php endif; ?>
+    </span>
+
+</nav>
+<?php endif; ?>
+
+
 
     <?php if (empty($orders)): ?>
         <div class="empty-orders">

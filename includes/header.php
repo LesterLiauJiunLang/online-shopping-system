@@ -432,7 +432,7 @@ if ($auth->isLoggedIn()) {
     
     <div class="header">
         <div class="logo">
-            <a href="<?php echo $base_url; ?>/public/index.php">🛒 Online Shopping</a>
+            <a href="<?php echo $base_url; ?>/public/index.php">🛒 GadgetMart </a>
         </div>
         <div class="nav-links">
             <?php if ($auth->isLoggedIn()): ?>
