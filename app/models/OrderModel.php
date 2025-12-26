@@ -87,7 +87,7 @@ public function getTotalOrdersCount() {
     
     // For admin dashboard - total revenue
     public function getTotalRevenue() {
-        $stmt = $this->conn->prepare("SELECT SUM(total_amount) as total FROM orders WHERE status = 'shipped' OR status = 'completed'");
+        $stmt = $this->conn->prepare("SELECT SUM(total_amount) as total FROM orders WHERE status = 'completed'");
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'] ?? 0;
@@ -107,7 +107,7 @@ public function getTotalOrdersCount() {
                 DATE_FORMAT(created_at, '%Y-%m') as month,
                 SUM(total_amount) as revenue
             FROM orders 
-            WHERE status IN ('delivered', 'completed')
+            WHERE status IN ('completed')
             GROUP BY DATE_FORMAT(created_at, '%Y-%m')
             ORDER BY month DESC
             LIMIT 6

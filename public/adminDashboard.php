@@ -209,12 +209,9 @@ try {
         GROUP BY status
         ORDER BY 
             CASE status
-                WHEN 'pending' THEN 1
-                WHEN 'processing' THEN 2
-                WHEN 'shipped' THEN 3
-                WHEN 'completed' THEN 4
-                WHEN 'cancelled' THEN 5
-                ELSE 6
+                WHEN 'completed' THEN 1
+                WHEN 'cancelled' THEN 2
+                ELSE 3
             END
     ");
     $revenueStmt->execute([$currentMonth]);
@@ -242,12 +239,9 @@ try {
         GROUP BY status
         ORDER BY 
             CASE status
-                WHEN 'pending' THEN 1
-                WHEN 'processing' THEN 2
-                WHEN 'shipped' THEN 3
-                WHEN 'completed' THEN 4
-                WHEN 'cancelled' THEN 5
-                ELSE 6
+                WHEN 'completed' THEN 1
+                WHEN 'cancelled' THEN 2
+                ELSE 3
             END
     ");
     $statusStmt->execute();
@@ -968,9 +962,6 @@ const colors = {
 
 // Status colors mapping
 const statusColors = {
-    'pending': '#ffc107',
-    'processing': '#17a2b8',
-    'shipped': '#5a4bff',
     'completed': '#28a745',
     'cancelled': '#dc3545'
 };
@@ -1502,11 +1493,8 @@ function printSalesAnalytics() {
                         display: inline-block;
                     }
                     
-                    .status-pending { background: #fff3cd; color: #856404; }
-                    .status-processing { background: #d4edda; color: #155724; }
                     .status-cancelled { background: #f8d7da; color: #721c24; }
                     .status-completed { background: #d1ecf1; color: #0c5460; }
-                    .status-shipped { background: #cce5ff; color: #004085; }
                 </style>
             </head>
             <body>
@@ -1637,11 +1625,8 @@ function printSalesAnalytics() {
                                                 <td>
                                                     <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
                                                         <div style="width: ${barWidth}%; height: 100%; 
-                                                            background: ${item.status === 'pending' ? '#ffc107' : 
-                                                                        item.status === 'processing' ? '#a328a7ff' :
-                                                                        item.status === 'completed' ? '#28a745' : 
-                                                                        item.status === 'cancelled' ? '#dc3545' : 
-                                                                        item.status === 'shipped' ? '#17a2b8' : '#5a4bff'};">
+                                                            background: ${item.status === 'completed' ? '#28a745' : 
+                                                                        item.status === 'cancelled' ? '#dc3545' : '#5a4bff'};">
                                                         </div>
                                                     </div>
                                                 </td>

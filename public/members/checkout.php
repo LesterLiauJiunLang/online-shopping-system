@@ -73,7 +73,7 @@ if (is_post()) {
         payment_method,
         payment_status
         )
-            VALUES (?, NOW(), 0, 'Pending', ?, ?, 'Paid')
+            VALUES (?, NOW(), 0, 'Completed', ?, ?, 'Paid')
         ");
         $stmt->execute([
             $_SESSION['user_id'],

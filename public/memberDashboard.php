@@ -109,20 +109,6 @@ try {
             <p class="stat-value"><?php echo count($orders); ?></p>
         </div>
         <div class="stat-card">
-            <h3>Pending Orders</h3>
-            <p class="stat-value">
-                <?php 
-                $pending = 0;
-                foreach ($orders as $order) {
-                    if ($order['status'] === 'Pending') {
-                        $pending++;
-                    }
-                }
-                echo $pending;
-                ?>
-            </p>
-        </div>
-        <div class="stat-card">
             <h3>Total Spent</h3>
             <p class="stat-value">
                 RM <?php 
@@ -178,10 +164,6 @@ try {
                     <p>1,234</p>
                 </div>
                 <div class="stat-card">
-                    <h4>Pending Orders</h4>
-                    <p>56</p>
-                </div>
-                <div class="stat-card">
                     <h4>Low Stock Items</h4>
                     <p>12</p>
                 </div>
@@ -191,20 +173,6 @@ try {
                 <div class="stat-card">
                     <h4>My Orders</h4>
                     <p><?php echo count($orders); ?></p>
-                </div>
-                <div class="stat-card">
-                    <h4>Pending Orders</h4>
-                    <p>
-                        <?php 
-                        $pendingCount = 0;
-                        foreach ($orders as $order) {
-                            if ($order['status'] === 'Pending') {
-                                $pendingCount++;
-                            }
-                        }
-                        echo $pendingCount;
-                        ?>
-                    </p>
                 </div>
                 <div class="stat-card">
                     <h4>Total Spent</h4>
@@ -223,7 +191,7 @@ try {
                         <?php 
                         $completed = 0;
                         foreach ($orders as $order) {
-                            if ($order['status'] === 'completed' || $order['status'] === 'delivered') {
+                            if ($order['status'] === 'Completed') {
                                 $completed++;
                             }
                         }

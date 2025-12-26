@@ -95,7 +95,7 @@ require_once __DIR__ . "/../../includes/header.php";
 
 <p>
     <a href="order_history.php" class="btn btn-primary">Back to Orders</a>
-    <?php if ($order['status'] === 'pending' || $order['status'] === 'processing'): ?>
+    <?php if ($order['status'] === 'Completed'): ?>
     <a href="cancel_order.php?id=<?= $order['order_id'] ?>" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</a>
     <?php endif; ?>
 </p>

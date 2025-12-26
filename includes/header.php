@@ -219,6 +219,7 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
                         <a href="<?php echo $base_url; ?>/public/dashboard.php">Dashboard</a>
                         <a href="<?php echo $base_url; ?>/public/members/products.php">Shop</a>
                         <a href="<?php echo $base_url; ?>/public/members/cart.php">Cart</a>
+                        <a href="<?php echo $base_url; ?>/public/members/order_detail.php">Order</a>
                     <?php endif; ?>
                     
                     <a href="<?php echo $base_url; ?>/public/logout.php" class="logout-btn">Logout</a>
