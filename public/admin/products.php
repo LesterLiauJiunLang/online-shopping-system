@@ -56,17 +56,23 @@ if (!empty($category_filter)) {
 
 if (!empty($price_range)) {
     switch ($price_range) {
-        case '0-50':
-            $sql .= " AND p.price BETWEEN 0 AND 50";
+        case '0-1000':
+            $sql .= " AND p.price BETWEEN 0 AND 1000";
             break;
-        case '50-100':
-            $sql .= " AND p.price BETWEEN 50 AND 100";
+        case '1000-2000':
+            $sql .= " AND p.price BETWEEN 1000 AND 2000";
             break;
-        case '100-200':
-            $sql .= " AND p.price BETWEEN 100 AND 200";
+        case '2000-3000':
+            $sql .= " AND p.price BETWEEN 2000 AND 3000";
             break;
-        case '200+':
-            $sql .= " AND p.price > 200";
+        case '3000-4000':
+            $sql .= " AND p.price BETWEEN 3000 AND 4000";
+            break;
+        case '4000-5000':
+            $sql .= " AND p.price BETWEEN 4000 AND 5000";
+            break;
+        case '5000+':
+            $sql .= " AND p.price > 5000";
             break;
     }
 }
@@ -140,10 +146,12 @@ $products = $stmt->fetchAll();
                     <label>Price Range</label>
                     <select name="price_range">
                         <option value="">All Prices</option>
-                        <option value="0-50" <?php echo $price_range == '0-50' ? 'selected' : ''; ?>>Under RM50</option>
-                        <option value="50-100" <?php echo $price_range == '50-100' ? 'selected' : ''; ?>>RM50 - RM100</option>
-                        <option value="100-200" <?php echo $price_range == '100-200' ? 'selected' : ''; ?>>RM100 - RM200</option>
-                        <option value="200+" <?php echo $price_range == '200+' ? 'selected' : ''; ?>>Above RM200</option>
+                        <option value="0-1000" <?php echo $price_range == '0-1000' ? 'selected' : ''; ?>>Under RM1000</option>
+                        <option value="1000-2000" <?php echo $price_range == '1000-2000' ? 'selected' : ''; ?>>RM1000-RM2000</option>
+                        <option value="2000-3000" <?php echo $price_range == '2000-3000' ? 'selected' : ''; ?>>RM2000-RM3000</option>
+                        <option value="3000-4000" <?php echo $price_range == '3000-4000' ? 'selected' : ''; ?>>RM3000-RM4000</option>
+                        <option value="4000-5000" <?php echo $price_range == '4000-5000' ? 'selected' : ''; ?>>RM4000-RM5000</option>
+                        <option value="5000+" <?php echo $price_range == '5000+' ? 'selected' : ''; ?>>Above RM5000</option>
                     </select>
                 </div>
                 
@@ -176,10 +184,12 @@ $products = $stmt->fetchAll();
                         with price: <strong>
                             <?php 
                             switch ($price_range) {
-                                case '0-50': echo 'Under RM50'; break;
-                                case '50-100': echo 'RM50 - RM100'; break;
-                                case '100-200': echo 'RM100 - RM200'; break;
-                                case '200+': echo 'Above RM200'; break;
+                                case '0-1000': echo 'Under RM1000'; break;
+                                case '1000-2000': echo 'RM1000 - RM2000'; break;
+                                case '2000-2000': echo 'RM2000 - RM3000'; break;
+                                case '3000-2000': echo 'RM3000 - RM4000'; break;
+                                case '4000-2000': echo 'RM4000 - RM5000'; break;
+                                case '5000+': echo 'Above RM5000'; break;
                             }
                             ?>
                         </strong>
