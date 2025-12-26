@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 // ============================================================================
 // Database Connection
 // ============================================================================
-$_db = new PDO("mysql:host=localhost;dbname=OnlineShoppingSystem", "root", "", [
+$_db = new PDO("mysql:host=localhost;dbname=OnlineShoppingSystem2", "root", "", [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
 ]);
@@ -393,8 +393,37 @@ function get_stock_text($quantity) {
 /**
  * Get product image URL (with fallback)
  */
-function get_product_image($image) {
-    return !empty($image) ? $image : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+function get_product_image($product_id, $conn = null) {
+    if ($conn === null) {
+        global $db;
+        $conn = $db;
+    }
+    
+    try {
+        $stmt = $conn->prepare("SELECT file_path FROM product_image WHERE product_id = ? ORDER BY sort_order ASC LIMIT 1");
+        $stmt->execute([$product_id]);
+        $image = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($image && !empty($image['file_path'])) {
+            // Check if file exists
+            $full_path = $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($image['file_path'], '/');
+            
+            if (file_exists($full_path)) {
+                // Return relative path for web display
+                return '/' . ltrim($image['file_path'], '/');
+            } else {
+                // Try alternative path (relative to current directory)
+                $alt_path = __DIR__ . '/../../' . $image['file_path'];
+                if (file_exists($alt_path)) {
+                    return $image['file_path'];
+                }
+            }
+        }
+        return null; // No image found
+    } catch (Exception $e) {
+        error_log("Error getting product image: " . $e->getMessage());
+        return null;
+    }
 }
 
 // ============================================================================

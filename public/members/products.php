@@ -418,38 +418,40 @@ $products = get_filtered_products(db(), $name, $category_name, $min_price, $max_
         </form>
 
         <!-- Product Grid -->
-        <div class="product-grid">
-            <?php if (empty($products)): ?>
-                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: white; border-radius: 10px;">
-                    <h3>No products found</h3>
-                    <p>Try adjusting your search filters</p>
-                    <a href="?" style="color: #e44d26;">Clear all filters</a>
-                </div>
-            <?php else: ?>
-                <?php foreach ($products as $product): ?>
-                    <?php
+<div class="product-grid">
+    <?php if (empty($products)): ?>
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: white; border-radius: 10px;">
+            <h3>No products found</h3>
+            <p>Try adjusting your search filters</p>
+            <a href="?" style="color: #e44d26;">Clear all filters</a>
+        </div>
+    <?php else: ?>
+        <?php foreach ($products as $product): ?>
+            <div class="product-card">
+                <div class="product-img-container">
+                    <?php 
                     // Get product images
                     $image_stmt = $db->prepare("SELECT file_path FROM product_image WHERE product_id = ? ORDER BY sort_order ASC");
                     $image_stmt->execute([$product['product_id']]);
                     $product_images = $image_stmt->fetchAll();
                     $image_count = count($product_images);
-                    
+
                     // Get the first image
                     $first_image = $product_images[0] ?? null;
                     $image_path = null;
-                    
+
                     if ($first_image && !empty($first_image['file_path'])) {
                         // Try multiple possible paths
                         $possible_paths = [
-                            '/' . $first_image['file_path'],
-                            '/online-shopping-system/' . $first_image['file_path'],
-                            $first_image['file_path'],
-                            '../' . $first_image['file_path'],
-                            '../../' . $first_image['file_path']
+                            '/' . $first_image['file_path'], // Add leading slash
+                            '/online-shopping-system/' . $first_image['file_path'], // Full path
+                            $first_image['file_path'], // Just the relative path
+                            base($first_image['file_path']) // Use base() function
                         ];
                         
                         // Check which path works
                         foreach ($possible_paths as $path) {
+                            // Remove any double slashes
                             $path = str_replace('//', '/', $path);
                             $test_path = $_SERVER['DOCUMENT_ROOT'] . $path;
                             
@@ -458,102 +460,79 @@ $products = get_filtered_products(db(), $name, $category_name, $min_price, $max_
                                 break;
                             }
                         }
-                        
-                        // If still no valid path, try without document root
-                        if (!$image_path) {
-                            foreach ($possible_paths as $path) {
-                                $path = str_replace('//', '/', $path);
-                                $relative_path = __DIR__ . '/../..' . $path;
-                                if (file_exists($relative_path)) {
-                                    $image_path = $path;
-                                    break;
-                                }
-                            }
-                        }
                     }
                     
-                    // Fallback to product's image_url if no product_image records
-                    if (!$image_path && !empty($product['image_url'])) {
-                        $image_path = $product['image_url'];
-                    }
+                    if ($image_path): 
                     ?>
-                    
-                    <div class="product-card" onclick="window.location.href='products_detail.php?id=<?php echo $product['product_id']; ?>'">
-                        <div class="product-img-container">
-                            <?php if ($image_path): ?>
-                                <img src="<?php echo htmlspecialchars($image_path); ?>" 
-                                     alt="<?php echo htmlspecialchars($product['name']); ?>"
-                                     class="product-img"
-                                     onerror="handleImageError(this)">
-                                
-                                <div class="image-fallback" style="display: none;">
-                                    <div class="icon">📷</div>
-                                    <small>Image not found</small>
-                                </div>
-                                
-                                <?php if ($image_count > 1): ?>
-                                    <span class="image-count">+<?php echo $image_count - 1; ?> more</span>
-                                <?php endif; ?>
-                                
-                            <?php elseif ($product['category_name']): ?>
-                                <div class="image-fallback">
-                                    <div class="icon">
-                                        <?php 
-                                        switch(strtolower($product['category_name'])) {
-                                            case 'electronics': echo '📱'; break;
-                                            case 'clothing': echo '👕'; break;
-                                            case 'books': echo '📚'; break;
-                                            case 'home & kitchen': echo '🏠'; break;
-                                            case 'sports & outdoors': echo '⚽'; break;
-                                            default: echo '🛒';
-                                        }
-                                        ?>
-                                    </div>
-                                    <small><?php echo htmlspecialchars($product['category_name']); ?></small>
-                                </div>
-                            <?php else: ?>
-                                <div class="image-fallback">
-                                    <div class="icon">🛒</div>
-                                    <small>No image</small>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                                
-                        <div class="product-info">
-                            <h3 class="product-title"><?php echo htmlspecialchars($product['name']); ?></h3>
-                            
-                            <div class="product-price">
-                                RM <?php echo number_format($product['price'], 2); ?>
-                            </div>
-                            
-                            <?php if ($product['category_name']): ?>
-                                <div class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></div>
-                            <?php endif; ?>
-                            
-                            <!-- Stock status -->
-                            <div style="margin: 10px 0; font-size: 0.9rem;">
-                                <?php
-                                $stock_class = get_stock_class($product['stock_quantity']);
-                                $stock_text = get_stock_text($product['stock_quantity']);
+                        <img src="<?php echo $image_path; ?>" 
+                             alt="<?php echo htmlspecialchars($product['name']); ?>"
+                             class="product-img"
+                             onerror="handleImageError(this)">
+                        
+                        <?php if ($image_count > 1): ?>
+                            <span class="image-count">+<?php echo $image_count - 1; ?> more</span>
+                        <?php endif; ?>
+                        
+                    <?php elseif ($product['category_name']): ?>
+                        <div class="image-fallback">
+                            <div class="icon">
+                                <?php 
+                                // Category-specific icons
+                                switch(strtolower($product['category_name'])) {
+                                    case 'electronics': echo '📱'; break;
+                                    case 'clothing': echo '👕'; break;
+                                    case 'books': echo '📚'; break;
+                                    case 'home & kitchen': echo '🏠'; break;
+                                    case 'sports & outdoors': echo '⚽'; break;
+                                    default: echo '🛒';
+                                }
                                 ?>
-                                <span class="stock-<?php echo $stock_class; ?>" 
-                                      style="padding: 3px 8px; border-radius: 12px;">
-                                    <?php echo $stock_text; ?>
-                                </span>
                             </div>
-                            
-                            <form method="post" action="products_detail.php" style="display: inline;">
-                                <input type="hidden" name="id" value="<?php echo $product['product_id']; ?>">
-                                <input type="hidden" name="unit" value="1">
-                                <button type="submit" class="add-to-cart" onclick="event.stopPropagation();">
-                                    Add to Cart
-                                </button>
-                            </form>
+                            <small><?php echo htmlspecialchars($product['category_name']); ?></small>
                         </div>
+                    <?php else: ?>
+                        <div class="image-fallback">
+                            <div class="icon">🛒</div>
+                            <small>No image</small>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="product-info">
+                    <h3 class="product-title"><?php echo htmlspecialchars($product['name']); ?></h3>
+                    
+                    <div class="product-price">
+                        RM <?php echo number_format($product['price'], 2); ?>
                     </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
+                    
+                    <?php if ($product['category_name']): ?>
+                        <div class="product-category"><?php echo htmlspecialchars($product['category_name']); ?></div>
+                    <?php endif; ?>
+                    
+                    <!-- Stock status -->
+                    <div style="margin: 10px 0; font-size: 0.9rem;">
+                        <?php
+                        $stock_class = get_stock_class($product['stock_quantity']);
+                        $stock_text = get_stock_text($product['stock_quantity']);
+                        ?>
+                        <span class="stock-<?php echo $stock_class; ?>" 
+                              style="padding: 3px 8px; border-radius: 12px;">
+                            <?php echo $stock_text; ?>
+                        </span>
+                    </div>
+                    
+                    <form method="post" action="products_detail.php" style="display: inline;">
+                        <input type="hidden" name="id" value="<?php echo $product['product_id']; ?>">
+                        <input type="hidden" name="unit" value="1">
+                        <button type="submit" class="add-to-cart" onclick="event.stopPropagation();">
+                            Add to Cart
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
     </main>
     
     <script>
@@ -601,12 +580,16 @@ $products = get_filtered_products(db(), $name, $category_name, $min_price, $max_
     
     // Handle image errors
     function handleImageError(img) {
-        img.style.display = 'none';
-        const fallback = img.nextElementSibling;
-        if (fallback && fallback.classList.contains('image-fallback')) {
-            fallback.style.display = 'flex';
-        }
-    }
+    img.style.display = 'none';
+    const container = img.parentElement;
+    const fallback = document.createElement('div');
+    fallback.className = 'image-fallback';
+    fallback.innerHTML = `
+        <div class="icon">🛒</div>
+        <small>Image not found</small>
+    `;
+    container.appendChild(fallback);
+}
     </script>
 </body>
 </html>

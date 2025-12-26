@@ -23,7 +23,7 @@ if (isset($_SESSION['registration_success']) && $_SESSION['registration_success'
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Online Shopping System - Home</title>
+    <title>GadgetMart - Home</title>
     <!-- Include both CSS files -->
     <link rel="stylesheet" href="../assets/css/auth.css">
     <link rel="stylesheet" href="../assets/css/style.css">
@@ -32,7 +32,7 @@ if (isset($_SESSION['registration_success']) && $_SESSION['registration_success'
     <!-- Header with home-header class -->
     <div class="home-header">
         <div class="logo">
-            <strong>Online Shopping System</strong>
+            <strong>GadgetMart</strong>
         </div>
         <div class="nav-links">
             <?php if (isset($_SESSION['user_id']) && isset($_SESSION['logged_in'])): ?>
@@ -99,7 +99,7 @@ if (isset($_SESSION['registration_success']) && $_SESSION['registration_success'
 
     <!-- Footer -->
     <div class="home-footer">
-        <p>&copy; <?php echo date('Y'); ?> Online Shopping System. All rights reserved.</p>
+        <p>&copy; <?php echo date('Y'); ?> GadgetMart. All rights reserved.</p>
         <p>
             <a href="#">Privacy Policy</a> | 
             <a href="#">Terms of Service</a> | 

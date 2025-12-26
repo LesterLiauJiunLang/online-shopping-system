@@ -542,7 +542,6 @@ function generateFinancialReport($db, $dateFrom, $dateTo) {
         <div class="report-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
     <h3>📋 <?php echo htmlspecialchars($reportTitle); ?> (<?php echo date('M d, Y', strtotime($dateFrom)); ?> - <?php echo date('M d, Y', strtotime($dateTo)); ?>)</h3>
     <div>
-        <button onclick="exportToCSV()" class="btn btn-success btn-sm">📥 Export CSV</button>
         <button onclick="exportToPDF()" class="btn btn-pdf btn-sm">📄 Export PDF</button>
     </div>
 </div>
@@ -1513,7 +1512,7 @@ function printSalesAnalytics() {
             <body>
                 <div class="report-header">
                     <h1 class="report-title">📈 SALES ANALYTICS REPORT</h1>
-                    <p class="report-meta">Online Shopping System - Admin Dashboard</p>
+                    <p class="report-meta">GadgetMart - Admin Dashboard</p>
                     <p class="report-meta">Generated: ${currentDate.toLocaleDateString()} ${currentDate.toLocaleTimeString()}</p>
                     <div class="report-period">
                         ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()} Analysis
@@ -1715,7 +1714,7 @@ function printSalesAnalytics() {
                 <!-- Footer -->
                 <div class="report-footer">
                     <p>--- CONFIDENTIAL - FOR INTERNAL USE ONLY ---</p>
-                    <p>Online Shopping System | Admin Dashboard</p>
+                    <p>GadgetMart | Admin Dashboard</p>
                     <p>Report ID: ANALYTICS-${currentDate.getFullYear()}${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${Math.random().toString(36).substr(2, 8).toUpperCase()}</p>
                     <p>Page 1 of 1</p>
                 </div>
@@ -1846,47 +1845,6 @@ function printDetailedReports() {
     `);
     
     printWindow.document.close();
-}
-
-// Export to CSV function
-function exportToCSV() {
-    // Get the report data from the table
-    const table = document.querySelector('.report-table table');
-    const rows = table.querySelectorAll('tr');
-    let csv = [];
-    
-    // Add headers
-    const headers = [];
-    table.querySelectorAll('thead th').forEach(th => {
-        headers.push(th.textContent.trim());
-    });
-    csv.push(headers.join(','));
-    
-    // Add data rows
-    table.querySelectorAll('tbody tr').forEach(row => {
-        const rowData = [];
-        row.querySelectorAll('td').forEach(cell => {
-            // Remove HTML tags and trim
-            const text = cell.textContent.replace(/[\n\r]+|[\s]{2,}/g, ' ').trim();
-            // Escape commas and quotes
-            rowData.push(`"${text.replace(/"/g, '""')}"`);
-        });
-        csv.push(rowData.join(','));
-    });
-    
-    // Create and download CSV file
-    const csvContent = csv.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'report_<?php echo date("Y-m-d_His"); ?>.csv');
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 }
 
 // Export to PDF function
@@ -2068,7 +2026,7 @@ function exportToPDF() {
             
             <div class="pdf-footer">
                 <p>--- Confidential Report ---</p>
-                <p>Online Shopping System | Admin Dashboard</p>
+                <p>GadgetMart | Admin Dashboard</p>
                 <p>Report ID: ${reportType.toUpperCase()}-${new Date().getTime().toString().slice(-8)}</p>
             </div>
             

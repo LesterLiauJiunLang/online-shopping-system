@@ -66,7 +66,7 @@ try {
         // Send verification email
         $mail = get_mail();
         $mail->addAddress($email);
-        $mail->Subject = 'Email Verification - Online Shopping System';
+        $mail->Subject = 'Email Verification - GadgetMart';
         
         $verification_link = base("verify_email_code.php");
         
@@ -78,7 +78,7 @@ try {
             <p><a href='$verification_link'>Verify Email Address</a></p>
             <p>This code will expire in 10 minutes.</p>
             <p>If you didn't request this, please ignore this email.</p>
-            <p>Best regards,<br>Online Shopping System Team</p>
+            <p>Best regards,<br>GadgetMart Team</p>
         ";
         
         $mail->AltBody = "Your verification code: $verification_code\n\nVisit: $verification_link\n\nCode expires in 10 minutes.";

@@ -73,7 +73,6 @@ class Order {
 }
     
     // For admin dashboard - total orders count
-    // For admin dashboard - total orders count
 public function getTotalOrdersCount() {
     try {
         $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM orders");

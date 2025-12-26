@@ -91,7 +91,7 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($page_title) ? $page_title : 'Online Shopping System'; ?></title>
+    <title><?php echo isset($page_title) ? $page_title : 'GadgetMart'; ?></title>
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/style.css">
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/auth.css">
     <link rel="stylesheet" href="<?php echo $base_url; ?>/assets/css/admin.css">
@@ -189,7 +189,7 @@ if (!empty($profile_photo) && $profile_photo !== 'avatar.png') {
     
     <div class="header">
         <div class="logo">
-            <a href="<?php echo $base_url; ?>/public/index.php">🛒 Online Shopping</a>
+            <a href="<?php echo $base_url; ?>/public/index.php">🛒 GadgetMart</a>
         </div>
         <div class="nav-links">
             <?php if ($isLoggedIn): ?>

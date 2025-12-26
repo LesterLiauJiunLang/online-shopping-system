@@ -113,7 +113,7 @@ if (is_post() && !isset($_POST['ajax_login'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Online Shopping System</title>
+    <title>Login - GadgetMart</title>
     
     <!-- External CSS Files -->
     <link rel="stylesheet" href="../assets/css/notifications.css">
@@ -122,7 +122,7 @@ if (is_post() && !isset($_POST['ajax_login'])) {
 <body>
     <!-- Header -->
     <div class="auth-header">
-        <h1>Online Shopping System</h1>
+        <h1>GadgetMart</h1>
         <p>Login to Your Account</p>
     </div>
     
@@ -181,7 +181,7 @@ if (is_post() && !isset($_POST['ajax_login'])) {
     
     <!-- Footer -->
     <div class="auth-footer">
-        <p>&copy; <?php echo date('Y'); ?> Online Shopping System. All rights reserved.</p>
+        <p>&copy; <?php echo date('Y'); ?> GadgetMart. All rights reserved.</p>
     </div>
     
     <!-- JavaScript Files -->

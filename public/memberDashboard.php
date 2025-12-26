@@ -269,9 +269,9 @@ try {
                                     <?php echo ucfirst($order['status']); ?>
                                 </span>
                             </td>
-                            <td><?php echo date('d/m/Y', strtotime($order['created_at'] ?? $order['order_date'] ?? '')); ?></td>
+                            <td><?php echo date('d/m/Y', strtotime($order['order_date'] ?? $order['created_at'] ?? '')); ?></td>
                             <td>
-                                <a href="order_details.php?id=<?php echo $order['order_id']; ?>" class="btn btn-primary btn-sm">View Details</a>
+                                <a href="members/order_detail.php?id=<?php echo $order['order_id']; ?>" class="btn btn-primary btn-sm">View Details</a>
                             </td>
                         </tr>
                     <?php 
