@@ -137,7 +137,7 @@ $status = get('status', 'all'); // all, active, inactive, locked
 $verification = get('verification', 'all'); // all, verified, pending
 $sort = get('sort', 'newest'); // newest, oldest, name_asc, name_desc, last_login
 $page = get('page', 1);
-$limit = 20;
+$limit =5;
 $offset = ($page - 1) * $limit;
 $total_members = 0;
 $total_pages = 1;
@@ -845,3 +845,5 @@ $csrf_token = csrf_token();
     </script>
 </body>
 </html>
+
+

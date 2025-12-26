@@ -1,14 +1,32 @@
 <?php
+// ========== ADD THIS AT THE VERY TOP ==========
+ob_start(); // Start output buffering
+
 // Force session start at the VERY TOP
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
 require_once '../lib/base.php';  
 require_once '../lib/auth.php';
 
 // Check if already logged in 
 if (is_logged_in()) {
-    redirect('dashboard.php');
+    // Redirect to appropriate dashboard based on role
+    if (isset($_SESSION['role'])) {
+        switch ($_SESSION['role']) {
+            case 'admin':
+                redirect('adminDashboard.php');
+                break;
+            case 'support':
+                redirect('supportDashboard.php');
+                break;
+            case 'member':
+            default:
+                redirect('memberDashboard.php');
+                break;
+        }
+    }
     exit();
 }
 
@@ -17,10 +35,15 @@ if (isset($_SESSION['registration_success']) && $_SESSION['registration_success'
     $registration_message = $_SESSION['registration_message'] ?? 'Registration successful!';
     unset($_SESSION['registration_success']);
     unset($_SESSION['registration_message']);
-}
+} 
 
 // ========== AJAX LOGIN ENDPOINT ==========
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_login'])) {
+    // Clean ALL output buffers
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
     $remember_me = isset($_POST['remember_me']) ? 1 : 0;
@@ -28,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_login'])) {
     $response = [
         'success' => false,
         'message' => '',
-        'redirect' => null,
+        'redirect' => 'login.php',
         'needs_verification' => false
     ];
     
@@ -46,7 +69,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_login'])) {
     if ($result === "success" || $result === "success_needs_verification") {
         $response['success'] = true;
         $response['message'] = "Login successful!";
-        $response['redirect'] = 'dashboard.php';
+        
+        // Determine redirect based on ACTUAL role in session
+        if (isset($_SESSION['role'])) {
+            switch ($_SESSION['role']) {
+                case 'admin':
+                    $response['redirect'] = 'adminDashboard.php';
+                    break;
+                case 'support':
+                    $response['redirect'] = 'supportDashboard.php';
+                    break;
+                case 'member':
+                default:
+                    $response['redirect'] = 'memberDashboard.php';
+                    break;
+            }
+        }
         
         // Set remember me token if checked
         if ($remember_me) {
@@ -98,14 +136,27 @@ if (is_post() && !isset($_POST['ajax_login'])) {
             unset($_SESSION['show_verification_reminder']);
         }
         
-        redirect('dashboard.php');
+        // Direct redirect based on role
+        if (isset($_SESSION['role'])) {
+            switch ($_SESSION['role']) {
+                case 'admin':
+                    redirect('adminDashboard.php');
+                    break;
+                case 'support':
+                    redirect('supportDashboard.php');
+                    break;
+                case 'member':
+                default:
+                    redirect('memberDashboard.php');
+                    break;
+            }
+        }
         
     } else {
         // Handle error messages
         $_err['login'] = $result;
     }
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -131,9 +182,16 @@ if (is_post() && !isset($_POST['ajax_login'])) {
         <h2 class="auth-title">Login</h2>
         
         <!-- Error Message (for non-AJAX) -->
-        <?php if (isset($error)): ?>
+        <?php if (isset($_err['login'])): ?>
             <div class="auth-message error">
-                <?php echo htmlspecialchars($error); ?>
+                <?php echo htmlspecialchars($_err['login']); ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- Registration Success Message -->
+        <?php if (isset($registration_message)): ?>
+            <div class="auth-message success">
+                <?php echo htmlspecialchars($registration_message); ?>
             </div>
         <?php endif; ?>
         
@@ -189,3 +247,4 @@ if (is_post() && !isset($_POST['ajax_login'])) {
     <script src="../assets/js/login.js"></script>
 </body>
 </html>
+

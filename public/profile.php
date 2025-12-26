@@ -12,6 +12,14 @@ if (!is_logged_in()) {
 $uid = $_SESSION['user_id'];
 
 // ----------------------------------------------------------------------------
+// Pagination settings for Recent Activities
+// ----------------------------------------------------------------------------
+$activities_per_page = 5; // Number of activities to show per page
+$current_page = isset($_GET['activity_page']) ? (int)$_GET['activity_page'] : 1;
+if ($current_page < 1) $current_page = 1;
+$offset = ($current_page - 1) * $activities_per_page;
+
+// ----------------------------------------------------------------------------
 // GET: Load current user data
 // ----------------------------------------------------------------------------
 if (is_get()) {
@@ -31,6 +39,9 @@ if (is_get()) {
     $created_at = $u['created_at'] ?? '';
     $last_login = $u['last_login'] ?? '';
     
+    // Store user role in session for easy access
+    $_SESSION['role'] = $user_role;
+    
     // Update session with current email if not set
     if (!isset($_SESSION['email']) && $email) {
         $_SESSION['email'] = $email;
@@ -41,66 +52,92 @@ if (is_get()) {
         $_SESSION['photo'] = $profile_photo;
     }
     
-    // Get personalized member statistics
+    // Initialize member_stats array for all roles
     $member_stats = [];
+    
+    // Get personalized member statistics ONLY for members
+    if ($user_role === 'member') {
+        try {
+            // Get order count and total spent
+            $stmt = $_db->prepare('
+                SELECT 
+                    COUNT(*) as order_count,
+                    SUM(total_amount) as total_spent,
+                    MAX(order_date) as last_order_date
+                FROM orders 
+                WHERE user_id = ? AND status != "cancelled"
+            ');
+            $stmt->execute([$uid]);
+            $order_stats = $stmt->fetch();
+            
+            $member_stats['order_count'] = $order_stats['order_count'] ?? 0;
+            $member_stats['total_spent'] = $order_stats['total_spent'] ?? 0;
+            $member_stats['last_order_date'] = $order_stats['last_order_date'] ?? null;
+            
+            // Get cart item count
+            $stmt = $_db->prepare('SELECT COUNT(*) as cart_count FROM shopping_cart WHERE user_id = ?');
+            $stmt->execute([$uid]);
+            $cart_stats = $stmt->fetch();
+            $member_stats['cart_count'] = $cart_stats['cart_count'] ?? 0;
+            
+            // Get favorite categories (most purchased)
+            $stmt = $_db->prepare('
+                SELECT c.name, COUNT(*) as purchase_count
+                FROM orders o
+                JOIN order_items oi ON o.order_id = oi.order_id
+                JOIN products p ON oi.product_id = p.product_id
+                JOIN category c ON p.category_id = c.category_id
+                WHERE o.user_id = ? AND o.status != "cancelled"
+                GROUP BY c.category_id
+                ORDER BY purchase_count DESC
+                LIMIT 3
+            ');
+            $stmt->execute([$uid]);
+            $member_stats['top_categories'] = $stmt->fetchAll();
+            
+            // Get recent orders (last 3)
+            $stmt = $_db->prepare('
+                SELECT order_id, order_date, total_amount, status
+                FROM orders
+                WHERE user_id = ?
+                ORDER BY order_date DESC
+                LIMIT 3
+            ');
+            $stmt->execute([$uid]);
+            $member_stats['recent_orders'] = $stmt->fetchAll();
+            
+        } catch (Exception $e) {
+            error_log("Error fetching member stats: " . $e->getMessage());
+            // Don't set to empty array, keep what we have
+        }
+    }
+    
+    // For ALL roles (including admin and support), get activity data
     try {
-        // Get order count and total spent
-        $stmt = $_db->prepare('
-            SELECT 
-                COUNT(*) as order_count,
-                SUM(total_amount) as total_spent,
-                MAX(order_date) as last_order_date
-            FROM orders 
-            WHERE user_id = ? AND status != "cancelled"
-        ');
+        // Get total count of activities for pagination
+        $stmt = $_db->prepare('SELECT COUNT(*) as total FROM user_activity WHERE user_id = ?');
         $stmt->execute([$uid]);
-        $order_stats = $stmt->fetch();
+        $total_activities = $stmt->fetchColumn();
+        $member_stats['total_activities'] = (int)$total_activities;
         
-        $member_stats['order_count'] = $order_stats['order_count'] ?? 0;
-        $member_stats['total_spent'] = $order_stats['total_spent'] ?? 0;
-        $member_stats['last_order_date'] = $order_stats['last_order_date'] ?? null;
+        // Calculate total pages
+        $total_pages = ceil($total_activities / $activities_per_page);
+        $member_stats['total_activity_pages'] = $total_pages;
         
-        // Get cart item count
-        $stmt = $_db->prepare('SELECT COUNT(*) as cart_count FROM shopping_cart WHERE user_id = ?');
-        $stmt->execute([$uid]);
-        $cart_stats = $stmt->fetch();
-        $member_stats['cart_count'] = $cart_stats['cart_count'] ?? 0;
-        
-        // Get favorite categories (most purchased)
-        $stmt = $_db->prepare('
-            SELECT c.name, COUNT(*) as purchase_count
-            FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            JOIN category c ON p.category_id = c.category_id
-            WHERE o.user_id = ? AND o.status != "cancelled"
-            GROUP BY c.category_id
-            ORDER BY purchase_count DESC
-            LIMIT 3
-        ');
-        $stmt->execute([$uid]);
-        $member_stats['top_categories'] = $stmt->fetchAll();
-        
-        // Get recent orders (last 3)
-        $stmt = $_db->prepare('
-            SELECT order_id, order_date, total_amount, status
-            FROM orders
-            WHERE user_id = ?
-            ORDER BY order_date DESC
-            LIMIT 3
-        ');
-        $stmt->execute([$uid]);
-        $member_stats['recent_orders'] = $stmt->fetchAll();
-        
-        // Get recent user activity (last 10 activities)
+        // Get paginated user activity
         $stmt = $_db->prepare('
             SELECT activity_type, description, ip_address, created_at
             FROM user_activity
             WHERE user_id = ?
             ORDER BY created_at DESC
-            LIMIT 10
+            LIMIT ? OFFSET ?
         ');
-        $stmt->execute([$uid]);
+        // Bind parameters
+        $stmt->bindValue(1, $uid, PDO::PARAM_INT);
+        $stmt->bindValue(2, $activities_per_page, PDO::PARAM_INT);
+        $stmt->bindValue(3, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        
         $member_stats['recent_activities'] = $stmt->fetchAll();
         
         // Get activity counts by type
@@ -115,8 +152,20 @@ if (is_get()) {
         $member_stats['activity_types'] = $stmt->fetchAll();
         
     } catch (Exception $e) {
-        error_log("Error fetching member stats: " . $e->getMessage());
-        $member_stats = [];
+        error_log("Error fetching activity stats: " . $e->getMessage());
+        // Ensure arrays exist even if there's an error
+        if (!isset($member_stats['recent_activities'])) {
+            $member_stats['recent_activities'] = [];
+        }
+        if (!isset($member_stats['activity_types'])) {
+            $member_stats['activity_types'] = [];
+        }
+        if (!isset($member_stats['total_activities'])) {
+            $member_stats['total_activities'] = 0;
+        }
+        if (!isset($member_stats['total_activity_pages'])) {
+            $member_stats['total_activity_pages'] = 1;
+        }
     }
 }
 
@@ -271,72 +320,62 @@ $_title = 'My Profile';
     }
     ?>
     
-    <!-- Personalized Member Dashboard -->
-    <div class="profile-stats-card" style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 25px; margin-bottom: 30px;">
-        <div class="card-header" style="border-bottom: 1px solid #eee; margin-bottom: 20px; padding-bottom: 15px;">
-            <h5 style="margin: 0; color: #333; font-size: 18px;"><i class="fas fa-user-circle"></i> Welcome, <?php echo htmlspecialchars($username); ?>!</h5>
+    <!-- Personalized Member Dashboard (ONLY for members) -->
+    <?php if ($user_role === 'member'): ?>
+    <div class="profile-stats-card">
+        <div class="card-header">
+            <h5><i class="fas fa-user-circle"></i> Welcome, <?php echo htmlspecialchars($username); ?>!</h5>
         </div>
         
-        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px;">
-            <div class="stat-item" style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <div class="stat-icon" style="font-size: 24px; color: #007bff; margin-bottom: 10px;">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-icon">
                     <i class="fas fa-shopping-bag"></i>
                 </div>
-                <div class="stat-value" style="font-size: 28px; font-weight: bold; color: #333;">
+                <div class="stat-value">
                     <?php echo $member_stats['order_count'] ?? 0; ?>
                 </div>
-                <div class="stat-label" style="color: #666; font-size: 14px;">Total Orders</div>
+                <div class="stat-label">Total Orders</div>
             </div>
             
-            <div class="stat-item" style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <div class="stat-icon" style="font-size: 24px; color: #007bff; margin-bottom: 10px;">
+            <div class="stat-item">
+                <div class="stat-icon">
                     <i class="fas fa-shopping-cart"></i>
                 </div>
-                <div class="stat-value" style="font-size: 28px; font-weight: bold; color: #333;">
+                <div class="stat-value">
                     <?php echo $member_stats['cart_count'] ?? 0; ?>
                 </div>
-                <div class="stat-label" style="color: #666; font-size: 14px;">Items in Cart</div>
+                <div class="stat-label">Items in Cart</div>
             </div>
             
-            <div class="stat-item" style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <div class="stat-icon" style="font-size: 24px; color: #007bff; margin-bottom: 10px;">
+            <div class="stat-item">
+                <div class="stat-icon">
                     <i class="fas fa-money-bill-wave"></i>
                 </div>
-                <div class="stat-value" style="font-size: 28px; font-weight: bold; color: #333;">
+                <div class="stat-value">
                     $<?php echo number_format($member_stats['total_spent'] ?? 0, 2); ?>
                 </div>
-                <div class="stat-label" style="color: #666; font-size: 14px;">Total Spent</div>
+                <div class="stat-label">Total Spent</div>
             </div>
             
-            <div class="stat-item" style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <div class="stat-icon" style="font-size: 24px; color: #007bff; margin-bottom: 10px;">
+            <div class="stat-item">
+                <div class="stat-icon">
                     <i class="fas fa-calendar-check"></i>
                 </div>
-                <div class="stat-value" style="font-size: 20px; font-weight: bold; color: #333;">
+                <div class="stat-value">
                     <?php echo date('M j, Y', strtotime($created_at)); ?>
                 </div>
-                <div class="stat-label" style="color: #666; font-size: 14px;">Member Since</div>
+                <div class="stat-label">Member Since</div>
             </div>
         </div>
         
-        <!-- Activity Summary -->
+        <!-- Activity Summary (Visible for all roles) -->
         <?php if (!empty($member_stats['activity_types'])): ?>
-        <div class="activity-summary" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-            <h6 style="color: #333; margin-bottom: 15px; font-size: 16px;"><i class="fas fa-chart-bar"></i> Activity Summary</h6>
-            <div class="activity-types" style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <div class="activity-summary">
+            <h6><i class="fas fa-chart-bar"></i> Activity Summary</h6>
+            <div class="activity-types">
                 <?php foreach ($member_stats['activity_types'] as $activity): ?>
-                <span class="activity-tag" style="
-                    background: rgba(0, 123, 255, 0.1);
-                    color: #007bff;
-                    padding: 6px 12px;
-                    border-radius: 20px;
-                    font-size: 13px;
-                    font-weight: 500;
-                    border: 1px solid rgba(0, 123, 255, 0.2);
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                ">
+                <span class="activity-tag">
                     <i class="fas fa-<?php 
                         switch(strtolower($activity['activity_type'])) {
                             case 'login': echo 'sign-in-alt'; break;
@@ -345,11 +384,13 @@ $_title = 'My Profile';
                             case 'order_placed': echo 'shopping-cart'; break;
                             case 'product_view': echo 'eye'; break;
                             case 'review_posted': echo 'star'; break;
+                            case 'admin_action': echo 'user-shield'; break;
+                            case 'support_ticket': echo 'life-ring'; break;
                             default: echo 'circle';
                         }
                     ?>"></i>
                     <?php echo ucfirst(str_replace('_', ' ', $activity['activity_type'])); ?>
-                    <span style="background: #007bff; color: white; border-radius: 10px; padding: 1px 6px; font-size: 11px;">
+                    <span class="activity-count">
                         <?php echo $activity['count']; ?>
                     </span>
                 </span>
@@ -358,49 +399,28 @@ $_title = 'My Profile';
         </div>
         <?php endif; ?>
         
-        <!-- Recent Orders -->
+        <!-- Recent Orders (ONLY for members) -->
         <?php if (!empty($member_stats['recent_orders'])): ?>
-        <div class="recent-orders" style="margin-top: 20px;">
-            <h6 style="color: #333; margin-bottom: 15px; font-size: 16px;"><i class="fas fa-history"></i> Recent Orders</h6>
-            <div class="orders-list" style="background: #f8f9fa; border-radius: 8px; padding: 15px;">
+        <div class="recent-orders">
+            <h6><i class="fas fa-history"></i> Recent Orders</h6>
+            <div class="orders-list">
                 <?php foreach ($member_stats['recent_orders'] as $order): ?>
-                <div class="order-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee;">
-                    <div>
-                        <span style="font-weight: 600; color: #333;">Order #<?php echo $order['order_id']; ?></span>
-                        <span style="color: #666; font-size: 13px; margin-left: 10px;"><?php echo date('M j, Y', strtotime($order['order_date'])); ?></span>
+                <div class="order-item">
+                    <div class="order-info">
+                        <span class="order-id">Order #<?php echo $order['order_id']; ?></span>
+                        <span class="order-date"><?php echo date('M j, Y', strtotime($order['order_date'])); ?></span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <span style="font-weight: 600; color: #333;">$<?php echo number_format($order['total_amount'], 2); ?></span>
-                        <span class="order-status" style="
-                            padding: 4px 8px;
-                            border-radius: 4px;
-                            font-size: 12px;
-                            font-weight: 600;
-                            background: <?php 
-                                switch(strtolower($order['status'])) {
-                                    case 'delivered': echo '#d4edda'; break;
-                                    case 'shipped': echo '#cce5ff'; break;
-                                    case 'confirmed': echo '#fff3cd'; break;
-                                    default: echo '#f8d7da';
-                                }
-                            ?>;
-                            color: <?php 
-                                switch(strtolower($order['status'])) {
-                                    case 'delivered': echo '#155724'; break;
-                                    case 'shipped': echo '#004085'; break;
-                                    case 'confirmed': echo '#856404'; break;
-                                    default: echo '#721c24';
-                                }
-                            ?>;
-                        ">
+                    <div class="order-details">
+                        <span class="order-amount">$<?php echo number_format($order['total_amount'], 2); ?></span>
+                        <span class="order-status status-<?php echo strtolower($order['status']); ?>">
                             <?php echo ucfirst($order['status']); ?>
                         </span>
                     </div>
                 </div>
                 <?php endforeach; ?>
                 <?php if (count($member_stats['recent_orders']) > 0): ?>
-                <div style="text-align: center; margin-top: 15px;">
-                    <a href="members/order_history.php" class="btn-verify" style="display: inline-flex; align-items: center; padding: 4px 12px;">
+                <div class="view-all-orders">
+                    <a href="orders.php" class="btn-verify">
                         <i class="fas fa-list"></i> View All Orders
                     </a>
                 </div>
@@ -409,6 +429,7 @@ $_title = 'My Profile';
         </div>
         <?php endif; ?>
     </div>
+    <?php endif; ?>
     
     <!-- Profile Update Form -->
     <div class="profile-form">
@@ -449,52 +470,79 @@ $_title = 'My Profile';
                 <button type="submit" name="btn_update" class="btn btn-primary">
                     <i class="fas fa-save"></i> Save Changes
                 </button>
+                
+                <!-- Change Password button (ONLY for members) -->
+                <?php if ($user_role === 'member'): ?>
                 <a href="password_reset.php" class="btn btn-secondary">
                     <i class="fas fa-key"></i> Change Password
                 </a>
+                <?php endif; ?>
+                
+                <!-- Back button - different destinations based on role -->
+                <?php if ($user_role === 'member'): ?>
+                <a href="memberDashboard.php" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+                <?php elseif ($user_role === 'admin'): ?>
+                <a href="adminDashboard.php" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Back to Admin Dashboard
+                </a>
+                <?php elseif ($user_role === 'support'): ?>
+                <a href="supportDashboard.php" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Back to Support Dashboard
+                </a>
+                <?php else: ?>
                 <a href="dashboard.php" class="btn btn-outline">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </a>
+                <?php endif; ?>
             </div>
         </form>
     </div>
     
-    <!-- Recent Activity Timeline -->
-    <?php if (!empty($member_stats['recent_activities'])): ?>
-    <div class="activity-timeline-card" style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 30px;">
-        <div class="card-header" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; padding: 20px 25px; border-bottom: 1px solid #495057;">
-            <h5 style="margin: 0; font-size: 18px;"><i class="fas fa-history"></i> Recent Activity</h5>
+    <!-- Recent Activity Timeline with Pagination (Visible for all roles) -->
+    <?php if (isset($member_stats['recent_activities']) && !empty($member_stats['recent_activities'])): ?>
+    <div class="activity-timeline-card">
+        <div class="card-header">
+            <h5><i class="fas fa-history"></i> Recent Activity</h5>
+            <?php if (isset($member_stats['total_activities']) && $member_stats['total_activities'] > 0): ?>
+            <div class="activity-info">
+                <span class="total-activities">
+                    <?php echo $member_stats['total_activities']; ?> total activities
+                </span>
+            </div>
+            <?php endif; ?>
         </div>
-        <div class="card-body" style="padding: 25px; background: white; color: #333;">
-            <div class="timeline" style="position: relative; padding-left: 30px;">
+        <div class="card-body">
+            <div class="timeline">
                 <?php foreach ($member_stats['recent_activities'] as $index => $activity): ?>
-                <div class="timeline-item" style="position: relative; margin-bottom: 25px; padding-bottom: 25px; border-bottom: 1px solid #eee;">
+                <div class="timeline-item">
                     <!-- Timeline dot -->
-                    <div style="position: absolute; left: -40px; top: 0; width: 20px; height: 20px; border-radius: 50%; background: #007bff; border: 3px solid white; box-shadow: 0 0 0 3px #007bff;"></div>
+                    <div class="timeline-dot"></div>
                     
                     <!-- Timeline content -->
                     <div class="timeline-content">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                            <div>
-                                <span style="font-weight: 600; color: #333; font-size: 15px;">
-                                    <i class="fas fa-<?php 
-                                        switch(strtolower($activity['activity_type'])) {
-                                            case 'login': echo 'sign-in-alt'; break;
-                                            case 'logout': echo 'sign-out-alt'; break;
-                                            case 'profile_update': echo 'user-edit'; break;
-                                            case 'order_placed': echo 'shopping-cart'; break;
-                                            case 'product_view': echo 'eye'; break;
-                                            case 'review_posted': echo 'star'; break;
-                                            default: echo 'circle';
-                                        }
-                                    ?>" style="margin-right: 8px; color: #007bff;"></i>
-                                    <?php echo ucfirst(str_replace('_', ' ', $activity['activity_type'])); ?>
-                                </span>
-                                <span style="margin-left: 10px; padding: 2px 8px; background: rgba(0, 123, 255, 0.1); color: #007bff; border-radius: 4px; font-size: 11px; font-weight: 500;">
+                        <div class="timeline-header">
+                            <div class="timeline-title">
+                                <i class="fas fa-<?php 
+                                    switch(strtolower($activity['activity_type'])) {
+                                        case 'login': echo 'sign-in-alt'; break;
+                                        case 'logout': echo 'sign-out-alt'; break;
+                                        case 'profile_update': echo 'user-edit'; break;
+                                        case 'order_placed': echo 'shopping-cart'; break;
+                                        case 'product_view': echo 'eye'; break;
+                                        case 'review_posted': echo 'star'; break;
+                                        case 'admin_action': echo 'user-shield'; break;
+                                        case 'support_ticket': echo 'life-ring'; break;
+                                        default: echo 'circle';
+                                    }
+                                ?>"></i>
+                                <?php echo ucfirst(str_replace('_', ' ', $activity['activity_type'])); ?>
+                                <span class="timeline-ip">
                                     <?php echo $activity['ip_address'] ?? 'N/A'; ?>
                                 </span>
                             </div>
-                            <span style="color: #666; font-size: 12px;">
+                            <span class="timeline-time">
                                 <?php 
                                     $timeAgo = time_ago($activity['created_at']);
                                     echo $timeAgo ? $timeAgo . ' ago' : date('M j, g:i A', strtotime($activity['created_at']));
@@ -503,7 +551,7 @@ $_title = 'My Profile';
                         </div>
                         
                         <?php if (!empty($activity['description'])): ?>
-                        <p style="margin: 0; color: #555; font-size: 14px; line-height: 1.5;">
+                        <p class="timeline-description">
                             <?php echo htmlspecialchars($activity['description']); ?>
                         </p>
                         <?php endif; ?>
@@ -511,19 +559,88 @@ $_title = 'My Profile';
                 </div>
                 <?php endforeach; ?>
                 
-                <?php if (count($member_stats['recent_activities']) > 0): ?>
-                <div style="text-align: center; margin-top: 20px;">
-                    <button type="button" class="btn-verify" onclick="loadMoreActivities()" style="display: inline-flex; align-items: center; padding: 4px 12px;">
-                        <i class="fas fa-redo"></i> Load More Activities
-                    </button>
+                <!-- Pagination Controls -->
+                <?php if (isset($member_stats['total_activity_pages']) && $member_stats['total_activity_pages'] > 1): ?>
+                <div class="activity-pagination">
+                    <div class="pagination-info">
+                        Showing <?php 
+                            $start = $offset + 1;
+                            $end = min($offset + $activities_per_page, $member_stats['total_activities'] ?? 0);
+                            echo $start . '-' . $end;
+                        ?> of <?php echo $member_stats['total_activities'] ?? 0; ?> activities
+                    </div>
+                    <div class="pagination-controls">
+                        <?php if ($current_page > 1): ?>
+                        <a href="?activity_page=<?php echo $current_page - 1; ?>" class="pagination-btn prev-btn">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                        <?php endif; ?>
+                        
+                        <div class="pagination-numbers">
+                            <?php
+                            $total_pages = $member_stats['total_activity_pages'] ?? 1;
+                            $max_pages_to_show = 5;
+                            $start_page = max(1, $current_page - floor($max_pages_to_show / 2));
+                            $end_page = min($total_pages, $start_page + $max_pages_to_show - 1);
+                            
+                            // Adjust start page if we're near the end
+                            if ($end_page - $start_page + 1 < $max_pages_to_show) {
+                                $start_page = max(1, $end_page - $max_pages_to_show + 1);
+                            }
+                            
+                            // Show first page if not in range
+                            if ($start_page > 1) {
+                                echo '<a href="?activity_page=1" class="pagination-number">1</a>';
+                                if ($start_page > 2) echo '<span class="pagination-ellipsis">...</span>';
+                            }
+                            
+                            // Show page numbers
+                            for ($page = $start_page; $page <= $end_page; $page++):
+                                if ($page == $current_page): ?>
+                                    <span class="pagination-number current"><?php echo $page; ?></span>
+                                <?php else: ?>
+                                    <a href="?activity_page=<?php echo $page; ?>" class="pagination-number">
+                                        <?php echo $page; ?>
+                                    </a>
+                                <?php endif;
+                            endfor;
+                            
+                            // Show last page if not in range
+                            if ($end_page < $total_pages) {
+                                if ($end_page < $total_pages - 1) echo '<span class="pagination-ellipsis">...</span>';
+                                echo '<a href="?activity_page=' . $total_pages . '" class="pagination-number">' . $total_pages . '</a>';
+                            }
+                            ?>
+                        </div>
+                        
+                        <?php if ($current_page < $total_pages): ?>
+                        <a href="?activity_page=<?php echo $current_page + 1; ?>" class="pagination-btn next-btn">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <?php endif; ?>
             </div>
         </div>
     </div>
+    <?php elseif (isset($member_stats['total_activities']) && $member_stats['total_activities'] == 0): ?>
+    <div class="activity-timeline-card">
+        <div class="card-header">
+            <h5><i class="fas fa-history"></i> Recent Activity</h5>
+        </div>
+        <div class="card-body">
+            <div class="no-activities">
+                <i class="fas fa-clock"></i>
+                <p>No activity recorded yet.</p>
+                <p class="small">Your activities will appear here once you start using the system.</p>
+            </div>
+        </div>
+    </div>
     <?php endif; ?>
     
-    <!-- Email Verification Section -->
+    <!-- Email Verification Section (ONLY for members) -->
+    <?php if ($user_role === 'member'): ?>
     <div class="verification-card">
         <div class="card-header">
             <h5><i class="fas fa-envelope"></i> Email Verification Status</h5>
@@ -579,65 +696,61 @@ $_title = 'My Profile';
             <?php endif; ?>
         </div>
     </div>
+    <?php endif; ?>
     
     <!-- Account Information Card -->
-    <div class="account-info-card" style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 30px;">
-        <div class="card-header" style="background: linear-gradient(135deg, #444 0%, #222 100%); color: white; padding: 20px 25px; border-bottom: 1px solid #444;">
-            <h5 style="margin: 0; font-size: 18px;"><i class="fas fa-info-circle"></i> Account Information</h5>
+    <div class="account-info-card">
+        <div class="card-header">
+            <h5><i class="fas fa-info-circle"></i> Account Information</h5>
         </div>
-        <div class="card-body" style="padding: 25px; background: white; color: #333;">
-            <div class="info-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        <div class="card-body">
+            <div class="info-grid">
                 <div class="info-item">
-                    <div class="info-label" style="color: #666; font-size: 14px; margin-bottom: 5px;">Account Role</div>
-                    <div class="info-value" style="font-weight: 600; color: #333; font-size: 16px;">
+                    <div class="info-label">Account Role</div>
+                    <div class="info-value">
                         <?php echo ucfirst($user_role); ?>
                         <?php if ($user_role === 'admin'): ?>
-                            <span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 8px;">Admin</span>
+                            <span class="role-badge admin-badge">Admin</span>
+                        <?php elseif ($user_role === 'support'): ?>
+                            <span class="role-badge support-badge">Support</span>
                         <?php endif; ?>
                     </div>
                 </div>
                 
                 <div class="info-item">
-                    <div class="info-label" style="color: #666; font-size: 14px; margin-bottom: 5px;">Member Since</div>
-                    <div class="info-value" style="font-weight: 600; color: #333; font-size: 16px;">
+                    <div class="info-label">Account Created</div>
+                    <div class="info-value">
                         <?php echo date('F j, Y', strtotime($created_at)); ?>
                     </div>
                 </div>
                 
                 <div class="info-item">
-                    <div class="info-label" style="color: #666; font-size: 14px; margin-bottom: 5px;">Last Login</div>
-                    <div class="info-value" style="font-weight: 600; color: #333; font-size: 16px;">
+                    <div class="info-label">Last Login</div>
+                    <div class="info-value">
                         <?php echo $last_login ? date('M j, Y g:i A', strtotime($last_login)) : 'Never'; ?>
                     </div>
                 </div>
                 
-                <?php if (!empty($member_stats['last_order_date'])): ?>
+                <!-- Last Order (ONLY for members) -->
+                <?php if ($user_role === 'member' && !empty($member_stats['last_order_date'])): ?>
                 <div class="info-item">
-                    <div class="info-label" style="color: #666; font-size: 14px; margin-bottom: 5px;">Last Order</div>
-                    <div class="info-value" style="font-weight: 600; color: #333; font-size: 16px;">
+                    <div class="info-label">Last Order</div>
+                    <div class="info-value">
                         <?php echo date('M j, Y', strtotime($member_stats['last_order_date'])); ?>
                     </div>
                 </div>
                 <?php endif; ?>
             </div>
             
-            <!-- Favorite Categories -->
-            <?php if (!empty($member_stats['top_categories'])): ?>
-            <div class="favorite-categories" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee;">
-                <h6 style="color: #333; margin-bottom: 15px; font-size: 16px;"><i class="fas fa-heart"></i> Your Favorite Categories</h6>
-                <div class="categories-list" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <!-- Favorite Categories (ONLY for members) -->
+            <?php if ($user_role === 'member' && !empty($member_stats['top_categories'])): ?>
+            <div class="favorite-categories">
+                <h6><i class="fas fa-heart"></i> Your Favorite Categories</h6>
+                <div class="categories-list">
                     <?php foreach ($member_stats['top_categories'] as $category): ?>
-                    <span class="category-tag" style="
-                        background: rgba(0, 123, 255, 0.1);
-                        color: #007bff;
-                        padding: 6px 12px;
-                        border-radius: 20px;
-                        font-size: 14px;
-                        font-weight: 500;
-                        border: 1px solid rgba(0, 123, 255, 0.2);
-                    ">
+                    <span class="category-tag">
                         <?php echo htmlspecialchars($category['name']); ?>
-                        <span style="background: #007bff; color: white; border-radius: 10px; padding: 1px 6px; font-size: 11px; margin-left: 5px;">
+                        <span class="category-count">
                             <?php echo $category['purchase_count']; ?>
                         </span>
                     </span>

@@ -643,4 +643,1092 @@ function update_cart($id, $unit) {
 
     set_cart($cart);
 }
+
+// ============================================================================
+// NOTIFICATION HELPERS
+// ============================================================================
+
+function createNotification($user_id, $type, $title, $message, $related_id = null) {
+    try {
+        require_once __DIR__ . '/../app/config/database.php';
+        $db = db();
+        
+        $stmt = $db->prepare("
+            INSERT INTO notifications (user_id, type, title, message, related_id, created_at) 
+            VALUES (?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([$user_id, $type, $title, $message, $related_id]);
+        
+        return $db->lastInsertId();
+    } catch (Exception $e) {
+        error_log("Notification creation failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+function notifyAllAdmins($type, $title, $message, $related_id = null) {
+    try {
+        require_once __DIR__ . '/../app/config/database.php';
+        $db = db();
+        
+        // Get all admin users
+        $stmt = $db->prepare("SELECT user_id FROM users WHERE role = 'admin' AND is_active = 1");
+        $stmt->execute();
+        $admins = $stmt->fetchAll();
+        
+        foreach ($admins as $admin) {
+            createNotification($admin['user_id'], $type, $title, $message, $related_id);
+        }
+        
+        return count($admins);
+    } catch (Exception $e) {
+        error_log("Admin notification failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+function notifyAllSupportAgents($type, $title, $message, $related_id = null) {
+    try {
+        require_once __DIR__ . '/../app/config/database.php';
+        $db = db();
+        
+        // Get all support agents
+        $stmt = $db->prepare("SELECT user_id FROM users WHERE role = 'support' AND is_active = 1");
+        $stmt->execute();
+        $agents = $stmt->fetchAll();
+        
+        foreach ($agents as $agent) {
+            createNotification($agent['user_id'], $type, $title, $message, $related_id);
+        }
+        
+        return count($agents);
+    } catch (Exception $e) {
+        error_log("Support agent notification failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+function notifyOrderStatusUpdate($order_id, $new_status, $user_id = null) {
+    try {
+        require_once __DIR__ . '/../app/config/database.php';
+        $db = db();
+        
+        // If user_id not provided, get it from order
+        if (!$user_id) {
+            $stmt = $db->prepare("SELECT user_id FROM orders WHERE order_id = ?");
+            $stmt->execute([$order_id]);
+            $order = $stmt->fetch();
+            $user_id = $order['user_id'];
+        }
+        
+        $status_messages = [
+            'Pending' => 'Your order is now being processed.',
+            'Processing' => 'Your order is now being processed.',
+            'Shipped' => 'Your order has been shipped!',
+            'Completed' => 'Your order has been delivered successfully.',
+            'Cancelled' => 'Your order has been cancelled.'
+        ];
+        
+        $message = isset($status_messages[$new_status]) 
+            ? $status_messages[$new_status] 
+            : "Your order status has been updated to: {$new_status}";
+        
+        // Notify the member
+        createNotification(
+            $user_id,
+            'order_update',
+            'Order Status Updated',
+            "Order #{$order_id}: {$message}",
+            $order_id
+        );
+        
+        return true;
+    } catch (Exception $e) {
+        error_log("Order status notification failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+function notifySupportReply($ticket_id, $sender_id, $message) {
+    try {
+        require_once __DIR__ . '/../app/config/database.php';
+        $db = db();
+        
+        // Get ticket info
+        $stmt = $db->prepare("SELECT user_id, subject, assigned_to FROM support_tickets WHERE ticket_id = ?");
+        $stmt->execute([$ticket_id]);
+        $ticket = $stmt->fetch();
+        
+        if ($ticket) {
+            // Notify the ticket creator (member)
+            if ($ticket['user_id'] != $sender_id) {
+                createNotification(
+                    $ticket['user_id'],
+                    'support_reply',
+                    'New Support Reply',
+                    "Support agent replied to your ticket: \"{$message}\"",
+                    $ticket_id
+                );
+            }
+            
+            // Notify admin about support activity
+            notifyAllAdmins(
+                'support_activity',
+                'Support Activity',
+                "New reply on ticket #{$ticket_id}: \"{$message}\"",
+                $ticket_id
+            );
+            
+            // Notify assigned support agent if different from sender
+            if ($ticket['assigned_to'] && $ticket['assigned_to'] != $sender_id) {
+                createNotification(
+                    $ticket['assigned_to'],
+                    'ticket_update',
+                    'Ticket Update',
+                    "New activity on ticket #{$ticket_id}",
+                    $ticket_id
+                );
+            }
+        }
+        
+        return true;
+    } catch (Exception $e) {
+        error_log("Support reply notification failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+// ============================================================================
+// SUPPORT FUNCTIONS
+// ============================================================================
+
+// Support Management Functions
+function get_support_agents($limit = 10, $offset = 0) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT * FROM users 
+            WHERE role = 'support' 
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+        ");
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(2, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Get support agents error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function get_support_agents_count() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT COUNT(*) as count FROM users WHERE role = 'support'
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get support agents count error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function search_support_agents($search, $limit = 10, $offset = 0) {
+    global $_db;
+    try {
+        $searchTerm = "%$search%";
+        $stmt = $_db->prepare("
+            SELECT * FROM users 
+            WHERE role = 'support' 
+            AND (username LIKE ? 
+                OR email LIKE ? 
+                OR employee_id LIKE ?)
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+        ");
+        $stmt->bindValue(1, $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(2, $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(3, $searchTerm, PDO::PARAM_STR);
+        $stmt->bindValue(4, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(5, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Search support agents error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function update_user_status($userId, $status) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            UPDATE users 
+            SET is_active = ?, updated_at = NOW() 
+            WHERE user_id = ?
+        ");
+        return $stmt->execute([$status, $userId]);
+    } catch (Exception $e) {
+        error_log("Update user status error: " . $e->getMessage());
+        return false;
+    }
+}
+
+function count_active_support_agents() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT COUNT(*) as count 
+            FROM users 
+            WHERE role = 'support' AND is_active = 1
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Count active support agents error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_user_activities($userId, $limit = 10) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT * FROM user_activity 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        ");
+        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Get user activities error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function get_support_agent_stats($agentId) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT 
+                COUNT(*) as total_tickets,
+                SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_tickets,
+                SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets,
+                SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets
+            FROM support_tickets 
+            WHERE assigned_to = ?
+        ");
+        $stmt->execute([$agentId]);
+        $result = $stmt->fetch();
+        
+        // Ensure all values are set
+        return [
+            'total_tickets' => $result['total_tickets'] ?? 0,
+            'open_tickets' => $result['open_tickets'] ?? 0,
+            'resolved_tickets' => $result['resolved_tickets'] ?? 0,
+            'closed_tickets' => $result['closed_tickets'] ?? 0
+        ];
+    } catch (Exception $e) {
+        error_log("Get support agent stats error: " . $e->getMessage());
+        return [
+            'total_tickets' => 0,
+            'open_tickets' => 0,
+            'resolved_tickets' => 0,
+            'closed_tickets' => 0
+        ];
+    }
+}
+
+function get_total_assigned_tickets() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT COUNT(*) as count 
+            FROM support_tickets 
+            WHERE assigned_to IS NOT NULL
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get total assigned tickets error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_open_tickets_count() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT COUNT(*) as count 
+            FROM support_tickets 
+            WHERE status IN ('open', 'in_progress')
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get open tickets count error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_total_resolved_tickets() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT COUNT(*) as count 
+            FROM support_tickets 
+            WHERE status = 'resolved'
+        ");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get total resolved tickets error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_agent_recent_tickets($agentId, $limit = 5) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT st.*, u.username as customer_name 
+            FROM support_tickets st
+            JOIN users u ON st.user_id = u.user_id
+            WHERE st.assigned_to = ?
+            ORDER BY st.updated_at DESC 
+            LIMIT ?
+        ");
+        $stmt->bindValue(1, $agentId, PDO::PARAM_INT);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Get agent recent tickets error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function get_user_by_id($userId) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("SELECT * FROM users WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        return $stmt->fetch();
+    } catch (Exception $e) {
+        error_log("Get user by ID error: " . $e->getMessage());
+        return null;
+    }
+}
+
+function get_user_by_email($email) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("SELECT * FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        return $stmt->fetch();
+    } catch (Exception $e) {
+        error_log("Get user by email error: " . $e->getMessage());
+        return null;
+    }
+}
+
+function get_user_by_username($username) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("SELECT * FROM users WHERE username = ?");
+        $stmt->execute([$username]);
+        return $stmt->fetch();
+    } catch (Exception $e) {
+        error_log("Get user by username error: " . $e->getMessage());
+        return null;
+    }
+}
+
+function get_total_customers_count() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("SELECT COUNT(*) as count FROM users WHERE role = 'member'");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get total customers count error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_total_orders_count() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("SELECT COUNT(*) as count FROM orders");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get total orders count error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_total_revenue() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("SELECT SUM(total_amount) as total FROM orders WHERE status IN ('Completed', 'Shipped', 'Processing')");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['total'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get total revenue error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_total_products_count() {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("SELECT COUNT(*) as count FROM products");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get total products count error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_recent_orders($limit = 10) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT o.*, u.username as customer_name 
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            ORDER BY o.order_date DESC 
+            LIMIT ?
+        ");
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Get recent orders error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function get_low_stock_products($threshold = 10) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT * FROM products 
+            WHERE stock_quantity <= ? 
+            AND stock_quantity > 0
+            ORDER BY stock_quantity ASC 
+            LIMIT 10
+        ");
+        $stmt->execute([$threshold]);
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Get low stock products error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/*
+function log_user_activity($userId, $activityType, $description, $ipAddress = null) {
+    global $_db;
+    try {
+        $ipAddress = $ipAddress ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $stmt = $_db->prepare("
+            INSERT INTO user_activity (user_id, activity_type, description, ip_address) 
+            VALUES (?, ?, ?, ?)
+        ");
+        return $stmt->execute([$userId, $activityType, $description, $ipAddress]);
+    } catch (Exception $e) {
+        error_log("Log activity error: " . $e->getMessage());
+        return false;
+    }
+}
+*/
+
+// ============================================================================
+// Helpers 
+// ============================================================================
+
+function get_pagination_data($totalItems, $itemsPerPage, $currentPage) {
+    $totalPages = ceil($totalItems / $itemsPerPage);
+    $currentPage = max(1, min($currentPage, $totalPages));
+    $offset = ($currentPage - 1) * $itemsPerPage;
+    
+    return [
+        'total_pages' => $totalPages,
+        'current_page' => $currentPage,
+        'offset' => $offset,
+        'has_previous' => $currentPage > 1,
+        'has_next' => $currentPage < $totalPages,
+        'start_item' => $offset + 1,
+        'end_item' => min($offset + $itemsPerPage, $totalItems),
+        'total_items' => $totalItems
+    ];
+}
+
+function generate_pagination_links($currentPage, $totalPages, $baseUrl = '', $search = '') {
+    $queryParams = [];
+    if ($search) {
+        $queryParams['search'] = $search;
+    }
+    
+    $html = '<nav aria-label="Page navigation"><ul class="pagination">';
+    
+    // Previous button
+    if ($currentPage > 1) {
+        $queryParams['page'] = $currentPage - 1;
+        $url = $baseUrl . '?' . http_build_query($queryParams);
+        $html .= '<li class="page-item"><a class="page-link" href="' . $url . '">&laquo; Previous</a></li>';
+    }
+    
+    // Page numbers
+    $startPage = max(1, $currentPage - 2);
+    $endPage = min($totalPages, $currentPage + 2);
+    
+    for ($i = $startPage; $i <= $endPage; $i++) {
+        $queryParams['page'] = $i;
+        $url = $baseUrl . '?' . http_build_query($queryParams);
+        $active = $i == $currentPage ? ' active' : '';
+        $html .= '<li class="page-item' . $active . '"><a class="page-link" href="' . $url . '">' . $i . '</a></li>';
+    }
+    
+    // Next button
+    if ($currentPage < $totalPages) {
+        $queryParams['page'] = $currentPage + 1;
+        $url = $baseUrl . '?' . http_build_query($queryParams);
+        $html .= '<li class="page-item"><a class="page-link" href="' . $url . '">Next &raquo;</a></li>';
+    }
+    
+    $html .= '</ul></nav>';
+    return $html;
+}
+
+function get_user_status_badge($isActive) {
+    if ($isActive) {
+        return '<span class="badge bg-success">Active</span>';
+    } else {
+        return '<span class="badge bg-danger">Inactive</span>';
+    }
+}
+
+function get_profile_image_html($profilePhoto, $username, $size = 32) {
+    if (!empty($profilePhoto)) {
+        return '<img src="../' . encode($profilePhoto) . '" 
+                   alt="' . encode($username) . '" 
+                   class="rounded-circle me-2" 
+                   width="' . $size . '" 
+                   height="' . $size . '">';
+    } else {
+        return '<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center me-2" 
+                    style="width: ' . $size . 'px; height: ' . $size . 'px;">
+                    <i class="fas fa-user text-white"></i>
+                </div>';
+    }
+}
+
+function format_last_login($lastLogin) {
+    if ($lastLogin) {
+        return date('M d, Y', strtotime($lastLogin)) . 
+               '<small class="text-muted d-block">' . 
+               date('h:i A', strtotime($lastLogin)) . '</small>';
+    } else {
+        return '<span class="text-muted">Never</span>';
+    }
+}
+
+function get_activity_type_badge($activityType) {
+    $badgeClasses = [
+        'profile_update' => 'bg-primary',
+        'create_support' => 'bg-success',
+        'ticket_update' => 'bg-warning',
+        'login' => 'bg-info',
+        'password_reset' => 'bg-secondary',
+        'activate_support' => 'bg-success',
+        'deactivate_support' => 'bg-danger'
+    ];
+    
+    $class = $badgeClasses[$activityType] ?? 'bg-secondary';
+    return '<span class="badge ' . $class . '">' . encode($activityType) . '</span>';
+}
+
+function get_user_activities_paginated($userId, $limit = 10, $offset = 0) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT * FROM user_activity 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+        ");
+        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(3, $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Get user activities error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function count_user_activities($userId) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("SELECT COUNT(*) as count FROM user_activity WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Count user activities error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+// ============================================================================
+// support helpers 
+// ============================================================================
+
+function get_support_agents_count_filtered($search = '', $status = 'all') {
+    global $_db;
+    
+    $where_conditions = ["role = 'support'"];
+    $params = [];
+    
+    if (!empty($search)) {
+        $where_conditions[] = "(username LIKE ? OR email LIKE ? OR employee_id LIKE ?)";
+        $search_param = "%$search%";
+        $params[] = $search_param;
+        $params[] = $search_param;
+        $params[] = $search_param;
+    }
+    
+    if ($status !== 'all') {
+        if ($status === 'active') {
+            $where_conditions[] = "is_active = 1";
+        } elseif ($status === 'inactive') {
+            $where_conditions[] = "is_active = 0";
+        }
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    $query = "SELECT COUNT(*) FROM users WHERE $where_clause";
+    
+    try {
+        $stmt = $_db->prepare($query);
+        $stmt->execute($params);
+        return $stmt->fetchColumn();
+    } catch (PDOException $e) {
+        error_log("Database error in get_support_agents_count_filtered: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_support_agents_filtered($limit = 20, $offset = 0, $search = '', $status = 'all', $sort = 'newest') {
+    global $_db;
+    
+    $where_conditions = ["role = 'support'"];
+    $params = [];
+    
+    if (!empty($search)) {
+        $where_conditions[] = "(username LIKE ? OR email LIKE ? OR employee_id LIKE ?)";
+        $search_param = "%$search%";
+        $params[] = $search_param;
+        $params[] = $search_param;
+        $params[] = $search_param;
+    }
+    
+    if ($status !== 'all') {
+        if ($status === 'active') {
+            $where_conditions[] = "is_active = 1";
+        } elseif ($status === 'inactive') {
+            $where_conditions[] = "is_active = 0";
+        }
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    
+    // Build ORDER BY clause
+    $order_by = 'created_at DESC'; // default
+    switch ($sort) {
+        case 'oldest':
+            $order_by = 'created_at ASC';
+            break;
+        case 'name_asc':
+            $order_by = 'username ASC';
+            break;
+        case 'name_desc':
+            $order_by = 'username DESC';
+            break;
+        case 'last_login':
+            $order_by = 'last_login DESC';
+            break;
+        case 'newest':
+        default:
+            $order_by = 'created_at DESC';
+            break;
+    }
+    
+    $query = "SELECT * FROM users 
+              WHERE $where_clause 
+              ORDER BY $order_by 
+              LIMIT ? OFFSET ?";
+    
+    try {
+        $stmt = $_db->prepare($query);
+        
+        // Bind search and filter parameters
+        $param_index = 1;
+        foreach ($params as $param) {
+            $stmt->bindValue($param_index, $param, PDO::PARAM_STR);
+            $param_index++;
+        }
+        
+        // Bind limit and offset
+        $stmt->bindValue($param_index++, $limit, PDO::PARAM_INT);
+        $stmt->bindValue($param_index, $offset, PDO::PARAM_INT);
+        
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("Database error in get_support_agents_filtered: " . $e->getMessage());
+        return [];
+    }
+}
+
+function build_query_global($new_params = []) {
+    $query = array_merge($_GET, $new_params);
+    // Remove empty values
+    $query = array_filter($query, function($value) {
+        return $value !== '' && $value !== null;
+    });
+    return http_build_query($query);
+}
+
+function remove_query_param_global($param) {
+    $query = $_GET;
+    unset($query[$param]);
+    // Reset page to 1 when removing filters
+    if (isset($query['page'])) {
+        $query['page'] = 1;
+    }
+    $query = array_filter($query, function($value) {
+        return $value !== '' && $value !== null;
+    });
+    return '?' . http_build_query($query);
+}
+
+function count_inactive_support_agents_filtered($search = '') {
+    global $_db;
+    
+    $where_conditions = ["role = 'support'", "is_active = 0"];
+    $params = [];
+    
+    if (!empty($search)) {
+        $where_conditions[] = "(username LIKE ? OR email LIKE ? OR employee_id LIKE ?)";
+        $search_param = "%$search%";
+        $params[] = $search_param;
+        $params[] = $search_param;
+        $params[] = $search_param;
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    
+    try {
+        $stmt = $_db->prepare("SELECT COUNT(*) as count FROM users WHERE $where_clause");
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Count inactive support agents error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_support_agent_stats_filtered($agentId, $date_from = null, $date_to = null) {
+    global $_db;
+    
+    $where_conditions = ["assigned_to = ?"];
+    $params = [$agentId];
+    
+    if ($date_from) {
+        $where_conditions[] = "created_at >= ?";
+        $params[] = $date_from;
+    }
+    
+    if ($date_to) {
+        $where_conditions[] = "created_at <= ?";
+        $params[] = $date_to;
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    
+    try {
+        $stmt = $_db->prepare("
+            SELECT 
+                COUNT(*) as total_tickets,
+                SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_tickets,
+                SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tickets,
+                SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets,
+                SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets
+            FROM support_tickets 
+            WHERE $where_clause
+        ");
+        
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        
+        // Ensure all values are set
+        return [
+            'total_tickets' => $result['total_tickets'] ?? 0,
+            'open_tickets' => $result['open_tickets'] ?? 0,
+            'in_progress_tickets' => $result['in_progress_tickets'] ?? 0,
+            'resolved_tickets' => $result['resolved_tickets'] ?? 0,
+            'closed_tickets' => $result['closed_tickets'] ?? 0
+        ];
+    } catch (Exception $e) {
+        error_log("Get support agent stats error: " . $e->getMessage());
+        return [
+            'total_tickets' => 0,
+            'open_tickets' => 0,
+            'in_progress_tickets' => 0,
+            'resolved_tickets' => 0,
+            'closed_tickets' => 0
+        ];
+    }
+}
+
+function get_agent_monthly_performance($agentId, $months = 6) {
+    global $_db;
+    
+    $end_date = date('Y-m-d');
+    $start_date = date('Y-m-d', strtotime("-{$months} months"));
+    
+    try {
+        $stmt = $_db->prepare("
+            SELECT 
+                DATE_FORMAT(created_at, '%Y-%m') as month,
+                COUNT(*) as total_tickets,
+                SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets
+            FROM support_tickets 
+            WHERE assigned_to = ? 
+                AND created_at >= ? 
+                AND created_at <= ?
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+            ORDER BY month DESC
+            LIMIT ?
+        ");
+        
+        $stmt->execute([$agentId, $start_date, $end_date, $months]);
+        $results = $stmt->fetchAll();
+        
+        // Format for easier use
+        $performance = [];
+        foreach ($results as $row) {
+            $performance[$row['month']] = [
+                'total' => $row['total_tickets'],
+                'resolved' => $row['resolved_tickets'],
+                'resolution_rate' => $row['total_tickets'] > 0 
+                    ? round(($row['resolved_tickets'] / $row['total_tickets']) * 100, 2)
+                    : 0
+            ];
+        }
+        
+        return $performance;
+    } catch (Exception $e) {
+        error_log("Get agent monthly performance error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function get_all_support_agents_for_dropdown($only_active = true) {
+    global $_db;
+    
+    $where_conditions = ["role = 'support'"];
+    if ($only_active) {
+        $where_conditions[] = "is_active = 1";
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    
+    try {
+        $stmt = $_db->prepare("
+            SELECT user_id, username, employee_id 
+            FROM users 
+            WHERE $where_clause 
+            ORDER BY username ASC
+        ");
+        $stmt->execute();
+        $agents = $stmt->fetchAll();
+        
+        $dropdown = [];
+        foreach ($agents as $agent) {
+            $label = $agent['username'];
+            if ($agent['employee_id']) {
+                $label .= " ({$agent['employee_id']})";
+            }
+            $dropdown[$agent['user_id']] = $label;
+        }
+        
+        return $dropdown;
+    } catch (Exception $e) {
+        error_log("Get all support agents for dropdown error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function get_recently_assigned_tickets($limit = 10) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT 
+                st.*,
+                u_customer.username as customer_name,
+                u_agent.username as agent_name,
+                u_agent.employee_id as agent_employee_id
+            FROM support_tickets st
+            JOIN users u_customer ON st.user_id = u_customer.user_id
+            LEFT JOIN users u_agent ON st.assigned_to = u_agent.user_id
+            WHERE st.assigned_to IS NOT NULL
+            ORDER BY st.updated_at DESC 
+            LIMIT ?
+        ");
+        $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Get recently assigned tickets error: " . $e->getMessage());
+        return [];
+    }
+}
+
+// ============================================================================
+// Notification Count
+// ============================================================================
+function get_unread_chat_notifications_count($user_id) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT COUNT(*) as count 
+            FROM notifications 
+            WHERE user_id = ? 
+            AND type = 'internal_chat' 
+            AND is_read = 0
+        ");
+        $stmt->execute([$user_id]);
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get unread chat notifications count error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+function get_total_unread_notifications($user_id) {
+    global $_db;
+    try {
+        $stmt = $_db->prepare("
+            SELECT COUNT(*) as count 
+            FROM notifications 
+            WHERE user_id = ? 
+            AND is_read = 0
+        ");
+        $stmt->execute([$user_id]);
+        $result = $stmt->fetch();
+        return $result['count'] ?? 0;
+    } catch (Exception $e) {
+        error_log("Get total unread notifications error: " . $e->getMessage());
+        return 0;
+    }
+}
+
+// ============================================================================
+// Extra 
+// ============================================================================
+
+function form_start($id = '', $method = 'POST', $action = '', $attributes = []) {
+    $method = strtoupper($method);
+    $action = $action ?: $_SERVER['PHP_SELF'];
+    
+    $attr_string = '';
+    foreach ($attributes as $key => $value) {
+        $attr_string .= " $key=\"$value\"";
+    }
+    
+    return "<form id=\"$id\" method=\"$method\" action=\"$action\"$attr_string>";
+}
+
+function form_end() {
+    return '</form>';
+}
+
+function hidden_field($name, $value = '', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    $value = encode($value);
+    return "<input type=\"hidden\" name=\"$name\" value=\"$value\"$attr_string>";
+}
+
+function textarea_field($name, $value = '', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    $value = encode($value);
+    return "<textarea name=\"$name\"$attr_string>$value</textarea>";
+}
+
+function submit_button($text = 'Submit', $name = 'submit', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    return "<button type=\"submit\" name=\"$name\"$attr_string>$text</button>";
+}
+
+function button($text, $type = 'button', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    return "<button type=\"$type\"$attr_string>$text</button>";
+}
+
+function select_field($name, $options, $selected = '', $attributes = []) {
+    $attr_string = '';
+    foreach ($attributes as $key => $val) {
+        $attr_string .= " $key=\"$val\"";
+    }
+    
+    $html = "<select name=\"$name\"$attr_string>";
+    foreach ($options as $value => $label) {
+        $is_selected = ($value == $selected) ? ' selected' : '';
+        $html .= "<option value=\"$value\"$is_selected>$label</option>";
+    }
+    $html .= '</select>';
+    
+    return $html;
+}
+
 ?>
