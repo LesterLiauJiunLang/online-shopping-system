@@ -252,7 +252,7 @@ if ($stmt->rowCount() > 0) {
 </head>
 <body>
     <div class="rating-container">
-        <a href="../../notifications.php" class="back-link">← Back to Notifications</a>
+        <a href="../notifications.php" class="back-link">← Back to Notifications</a>
         
         <h1>Rate Support Service</h1>
         <p style="color: #666; margin-bottom: 20px;">

@@ -629,7 +629,6 @@ try {
                     <div class="star-rating"><?php echo $star_rating_html; ?></div>
                     <p class="stat-label">Based on <?php echo $rating_count; ?> rating(s)</p>
                     <?php if ($rating_count < 3): ?>
-                        <p class="rating-count">(More ratings needed for accurate score)</p>
                     <?php endif; ?>
                 <?php else: ?>
                     <div class="stat-value">N/A</div>
@@ -650,12 +649,7 @@ try {
                     </div>
                 </a>
                 
-                <a href="support/orders.php" class="action-btn btn-info">
-                    <span class="action-icon">📦</span>
-                    <div>
-                        <strong>View Orders</strong>
-                    </div>
-                </a>
+            
                 
                 <a href="support/faq_manage.php" class="action-btn btn-success">
                     <span class="action-icon">❓</span>
@@ -664,18 +658,19 @@ try {
                     </div>
                 </a>
                 
-                <a href="support/customers.php" class="action-btn">
-                    <span class="action-icon">👤</span>
-                    <div>
-                        <strong>Customer Profiles</strong>
-                    </div>
-                </a>
 
                 <a href="admin/support_chat.php" class="btn btn-secondary">
                     <span class="action-icon">💬</span>
                     <div>
-                        <strong>Admin Chat</strong>
+                        <strong>Chat</strong>
                     </div>
+
+                <a href="support/ratings.php" class="action-btn">
+                    <span class="action-icon">⭐</span>
+                    <div>
+                        <strong>View Ratings</strong>
+                    </div>
+                </a>
                 </a>
             </div>
         </div>

@@ -1,4 +1,3 @@
-
 <?php
 // Start session
 if (session_status() === PHP_SESSION_NONE) {
@@ -291,12 +290,29 @@ try {
     $topProductsStmt->execute();
     $topProducts = $topProductsStmt->fetchAll();
     
+    // Get support agent count
+    $supportStmt = $db->prepare("SELECT COUNT(*) as count FROM users WHERE role = 'support'");
+    $supportStmt->execute();
+    $supportResult = $supportStmt->fetch();
+    $totalSupportAgents = $supportResult['count'] ?? 0;
+    
+    // Get active support tickets count
+    $ticketStmt = $db->prepare("
+        SELECT COUNT(*) as count FROM support_tickets 
+        WHERE status IN ('open', 'in_progress')
+    ");
+    $ticketStmt->execute();
+    $ticketResult = $ticketStmt->fetch();
+    $activeTickets = $ticketResult['count'] ?? 0;
+    
 } catch (Exception $e) {
     // Set default values if tables don't exist yet
     $totalOrders = 0;
     $totalRevenue = 0;
     $totalProducts = 0;
     $totalCustomers = 0;
+    $totalSupportAgents = 0;
+    $activeTickets = 0;
     $recentOrders = [];
     $lowStockProducts = [];
     $currentMonthTotal = 0;
@@ -510,6 +526,9 @@ function generateFinancialReport($db, $dateFrom, $dateTo) {
             <a href="admin/product_add.php" class="btn btn-success">Add New Product</a>
             <a href="admin/orders.php" class="btn btn-orange">View All Orders</a>
             <a href="admin/categories.php" class="btn btn-info">🏷️ Edit Categories</a>
+            <a href="admin/create_support.php" class="btn btn-warning">➕ Create Support Agent</a>
+            <a href="admin/support_chat.php" class="btn btn-secondary">💬 Support Chat</a>
+            <a href="admin/manage_support.php" class="btn btn-info" style="background-color: #17a2b8; border-color: #17a2b8;">👥 Manage Support Agents</a>
         </div>
     </div>
     
@@ -774,6 +793,14 @@ function generateFinancialReport($db, $dateFrom, $dateTo) {
         <div class="stat-card">
             <h3>Total Customers</h3>
             <p class="stat-value"><?php echo $totalCustomers; ?></p>
+        </div>
+        <div class="stat-card">
+            <h3>Support Agents</h3>
+            <p class="stat-value"><?php echo $totalSupportAgents; ?></p>
+        </div>
+        <div class="stat-card">
+            <h3>Active Tickets</h3>
+            <p class="stat-value"><?php echo $activeTickets; ?></p>
         </div>
     </div>
 
@@ -2244,6 +2271,57 @@ style.innerHTML = `
     .form-text {
         display: block;
         margin-top: 0.25rem;
+    }
+    
+    /* Glass button styling */
+    .glass-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .btn-glass-edit, .btn-glass-password {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        padding: 8px 16px;
+        border-radius: 8px;
+        color: #333;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-glass-edit:hover, .btn-glass-password:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    /* Stats grid enhancements */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .stat-card h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.1rem;
+        color: #666;
+    }
+    
+    .stat-card .stat-value {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: bold;
+        color: #333;
     }
 `;
 document.head.appendChild(style);
