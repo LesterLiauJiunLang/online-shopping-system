@@ -301,6 +301,23 @@ function format_date($date, $format = 'Y-m-d H:i') {
     return date($format, strtotime($date));
 }
 
+
+function get_product_image($product) {
+    // Priority 1: file_path from product_image table
+    if (!empty($product['product_image'])) {
+        // Assuming file_path is like 'ProductImage/iPhone_15_Pro.jpg'
+        return '/assets/' . $product['product_image'];
+    }
+    
+    // Priority 2: image_url from products table
+    if (!empty($product['image_url'])) {
+        return $product['image_url'];
+    }
+    
+    // Priority 3: Default image
+    return '/assets/img/no-image.png';
+}
+
 // ============================================================================
 // Database Helper Functions
 // ============================================================================
@@ -599,13 +616,6 @@ function get_stock_text($quantity) {
         return "Low Stock: $quantity left";
     }
     return "In Stock: $quantity units";
-}
-
-/**
- * Get product image URL (with fallback)
- */
-function get_product_image($image) {
-    return !empty($image) ? $image : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
 }
 
 // ============================================================================

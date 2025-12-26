@@ -7,11 +7,25 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'member') {
 
 require_once __DIR__ . '/../../app/config/database.php';
 
+// --- Sorting parameters ---
+$sort_field = $_GET['field'] ?? 'order_date'; // default sort by date
+$sort_order = $_GET['order'] ?? 'desc';       // default descending
+
+// Validate input to prevent SQL injection
+$allowed_fields = ['order_id', 'order_date'];
+$allowed_orders = ['asc', 'desc'];
+
+if (!in_array($sort_field, $allowed_fields)) $sort_field = 'order_date';
+if (!in_array(strtolower($sort_order), $allowed_orders)) $sort_order = 'desc';
+
+$sort_order_upper = strtoupper($sort_order);
+
+// --- Fetch orders ---
 $stmt = db()->prepare("
     SELECT *
     FROM orders
     WHERE user_id = ?
-    ORDER BY order_date DESC
+    ORDER BY $sort_field $sort_order_upper
 ");
 $stmt->execute([$_SESSION['user_id']]);
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -32,6 +46,13 @@ require_once __DIR__ . "/../../includes/header.php";
             <a href="products.php" class="shop-now-btn">Start Shopping</a>
         </div>
     <?php else: ?>
+        <!-- Sorting Links -->
+        <div class="orders-sorting">
+            Sort by: 
+            <a href="?field=order_id&order=asc">Order ↑</a> | 
+            <a href="?field=order_id&order=desc">Order ↓</a> | 
+        </div>
+
         <table class="orders-table">
             <thead>
                 <tr>
@@ -44,12 +65,9 @@ require_once __DIR__ . "/../../includes/header.php";
             </thead>
             <tbody>
                 <?php foreach ($orders as $order): ?>
-                    <?php
-                    // Determine status badge class
-                    $status_class = 'status-' . strtolower($order['status']);
-                    ?>
+                    <?php $status_class = 'status-' . strtolower($order['status']); ?>
                     <tr>
-                        <td data-label="Order ID">#<?= $order['order_id'] ?></td>
+                        <td data-label="Order ID"><?= $order['order_id'] ?>.</td>
                         <td data-label="Date"><?= date('M d, Y', strtotime($order['order_date'])) ?></td>
                         <td data-label="Total">RM <?= number_format($order['total_amount'], 2) ?></td>
                         <td data-label="Status">
@@ -69,7 +87,7 @@ require_once __DIR__ . "/../../includes/header.php";
     <?php endif; ?>
 
     <div class="cart-actions">
-        <a href="products.php" class="continue-shopping-btn">← Continue Shopping</a>
+        <a href="products.php" class="back-to-orders-btn">← Continue Shopping</a>
     </div>
 </div>
 

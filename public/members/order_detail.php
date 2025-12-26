@@ -26,11 +26,15 @@ $stmt = db()->prepare("
         oi.quantity,
         oi.unit_price,
         oi.subtotal,
+        p.product_id,
         p.name,
-        p.image_url,
-        p.product_id
+        COALESCE(pi.file_path, p.image_url) AS image_url
     FROM order_items oi
-    JOIN products p ON p.product_id = oi.product_id
+    JOIN products p 
+        ON p.product_id = oi.product_id
+    LEFT JOIN product_image pi 
+        ON pi.product_id = p.product_id
+        AND pi.sort_order = 0
     WHERE oi.order_id = ?
 ");
 $stmt->execute([$order_id]);
@@ -41,9 +45,10 @@ require_once __DIR__ . "/../../includes/header.php";
 
 
 <link rel="stylesheet" href="../../assets/css/orders.css">
+<script src="../../assets/js/review.js"></script>
 
 <div class="order-detail-container">
-    <h2 class="order-detail-title">Order #<?= $order['order_id'] ?></h2>
+    <h2 class="order-detail-title">Order <?= $order['order_id'] ?>.</h2>
     
     <!-- Order Information -->
     <div class="order-info-box">
@@ -106,7 +111,39 @@ require_once __DIR__ . "/../../includes/header.php";
                         RM <?= number_format($item['subtotal'], 2) ?>
                     </td>
                 </tr>
-            <?php endforeach; ?>
+            <?php if ($order['status'] === 'Shipped' || $order['status'] === 'Completed'): ?>
+                <tr class="review-row">
+                <td colspan="4">
+                    <button class="leave-review-btn" data-product-id="<?= $item['product_id'] ?>">
+                     Leave a Review
+                    </button>
+            <div class="review-form-container" style="display: none;">
+             <form class="review-form" data-product-id="<?= $item['product_id'] ?>" enctype="multipart/form-data">
+                <label>Rating:</label>
+                <select name="rating" required>
+                    <option value="">Select Rating</option>
+                    <?php for ($i=1; $i<=5; $i++): ?>
+                        <option value="<?= $i ?>"><?= $i ?> Star<?= $i > 1 ? 's' : '' ?></option>
+                    <?php endfor; ?>
+                </select>
+                <label>Comment:</label>
+                <textarea name="comment" rows="3" placeholder="Write your review..." required></textarea>
+                
+                <!-- Drag & Drop Image Upload -->
+                <label>Upload Images (optional):</label>
+                <div class="drag-drop-area" data-product-id="<?= $item['product_id'] ?>">
+                 <span class="drag-drop-text">Drag & Drop or click to upload images</span>
+                 <input type="file" name="images[]" multiple accept="image/*" style="display:none;">
+                </div>
+
+
+                <button type="submit">Submit Review</button>
+             </form>
+             </div>
+                </td>
+                </tr>
+            <?php endif; ?>
+         <?php endforeach; ?>
             
             <tr class="order-total-row">
                 <td colspan="3" class="order-total-label">Total</td>
@@ -135,8 +172,6 @@ require_once __DIR__ . "/../../includes/header.php";
                 </button>
             </form>
         <?php endif; ?>
-        
-        <button onclick="window.print()" class="print-order-btn">Print Order</button>
     </div>
 </div>
 

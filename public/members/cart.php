@@ -35,9 +35,13 @@ $stmt = db()->prepare("
         sc.quantity,
         p.name,
         p.price,
-        p.image_url
+        COALESCE(pi.file_path, p.image_url) AS image_url
     FROM shopping_cart sc
-    JOIN products p ON p.product_id = sc.product_id
+    JOIN products p 
+        ON p.product_id = sc.product_id
+    LEFT JOIN product_image pi
+        ON pi.product_id = p.product_id
+        AND pi.sort_order = 0
     WHERE sc.user_id = ?
 ");
 $stmt->execute([$_SESSION['user_id']]);
