@@ -580,7 +580,7 @@ try {
                 <div class="dashboard-empty-icon">📦</div>
                 <h3>No Orders Yet</h3>
                 <p>You have not placed any orders yet.</p>
-                <a href="products.php" class="btn btn-primary">Start Shopping</a>
+                <a href="members/products.php" class="btn btn-primary">Start Shopping</a>
             </div>
         <?php else: ?>
             <table class="dashboard-table">
