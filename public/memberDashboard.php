@@ -506,6 +506,10 @@ try {
             <a href="faq.php" class="btn btn-faq">
                 <i class="fas fa-life-ring"></i> Help & FAQ
             </a>
+
+            <a href="members/reviews.php" class="btn btn-faq">
+                <i class="fas fa-life-ring"></i> Reviews
+            </a>
             
         
         </div>

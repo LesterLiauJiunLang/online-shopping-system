@@ -37,11 +37,16 @@ $price_range = $_GET['price_range'] ?? '';
 // Get categories for filter
 $categories = $db->query("SELECT * FROM category")->fetchAll();
 
-// Build the SQL query with filters
+// Build the SQL query with filters - SIMILAR TO MEMBERS/PRODUCTS.PHP
 $sql = "
-    SELECT p.*, c.name as category_name 
+    SELECT 
+        p.*, 
+        c.name as category_name,
+        COALESCE(pi.file_path, p.image_url) AS image_url,
+        COUNT(DISTINCT pi.image_id) as image_count
     FROM products p 
     LEFT JOIN category c ON p.category_id = c.category_id 
+    LEFT JOIN product_image pi ON p.product_id = pi.product_id
     WHERE 1=1
 ";
 
@@ -79,8 +84,10 @@ if (!empty($price_range)) {
     }
 }
 
-// Add ordering
-$sql .= " ORDER BY p.created_at DESC";
+// Group by and order
+$sql .= " GROUP BY p.product_id, p.name, p.description, p.price, p.stock_quantity, 
+           p.category_id, p.created_at, p.updated_at, c.name, COALESCE(pi.file_path, p.image_url)
+          ORDER BY p.created_at DESC";
 
 // Prepare and execute the query
 $stmt = $db->prepare($sql);
@@ -213,77 +220,55 @@ $products = $stmt->fetchAll();
         <?php else: ?>
             <div class="products-grid">
                 <?php 
-                // Add sequential numbering if needed
                 $counter = 1;
                 foreach ($products as $product): 
+                    // SAME LOGIC AS MEMBERS/PRODUCTS.PHP
+                    $image_url = !empty($product['image_url']) 
+                        ? $product['image_url'] 
+                        : '/assets/img/no-image.png';
+                    $image_count = $product['image_count'] ?? 0;
                 ?>
                 <div class="product-card">
-                    <div class="product-card">
-    <div class="product-image <?php echo ($image_count > 1) ? 'has-multiple-images' : ''; ?>">
-    <?php 
-    // Get product images
-    $image_stmt = $db->prepare("SELECT file_path FROM product_image WHERE product_id = ? ORDER BY sort_order ASC");
-    $image_stmt->execute([$product['product_id']]);
-    $product_images = $image_stmt->fetchAll();
-    $image_count = count($product_images);
-    
-    // Get the first image
-    $first_image = $product_images[0] ?? null;
-    $image_path = null;
-    
-    if ($first_image && !empty($first_image['file_path'])) {
-        $full_image_path = __DIR__ . '/../../' . $first_image['file_path'];
-        if (file_exists($full_image_path)) {
-            // Use relative path from root
-            $image_path = '/online-shopping-system/' . $first_image['file_path'];
-        }
-    }
-    
-    if ($image_path): 
-    ?>
-        <img src="<?php echo $image_path; ?>" 
-             alt="<?php echo htmlspecialchars($product['name']); ?>"
-             class="product-thumbnail"
-             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-        
-        <div class="fallback-icon" style="display: none;">
-            <div style="font-size: 48px;">📷</div>
-            <small>Image not found</small>
-        </div>
-        
-        <?php if ($image_count > 1): ?>
-            <span class="image-count">+<?php echo $image_count - 1; ?> more</span>
-        <?php endif; ?>
-        
-    <?php elseif ($product['category_name']): ?>
-        <div class="category-icon">
-            <div style="font-size: 48px;">
-                <?php 
-                // Category-specific icons
-                switch(strtolower($product['category_name'])) {
-                    case 'electronics': echo '📱'; break;
-                    case 'clothing': echo '👕'; break;
-                    case 'books': echo '📚'; break;
-                    case 'home & kitchen': echo '🏠'; break;
-                    case 'sports & outdoors': echo '⚽'; break;
-                    default: echo '🛒';
-                }
-                ?>
-            </div>
-            <small><?php echo htmlspecialchars($product['category_name']); ?></small>
-        </div>
-    <?php else: ?>
-        <div class="default-icon">
-            <div style="font-size: 48px;">🛒</div>
-            <small>No image</small>
-        </div>
-    <?php endif; ?>
-</div>
-    
-    <div class="product-info">
-        <!-- Rest of your product info -->
-    </div>
-</div>
+                    <div class="product-image <?php echo ($image_count > 1) ? 'has-multiple-images' : ''; ?>">
+                        <?php if ($image_url && $image_url !== '/assets/img/no-image.png'): ?>
+                            <img src="<?php echo htmlspecialchars($image_url); ?>" 
+                                 alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                 class="product-thumbnail"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            
+                            <div class="fallback-icon" style="display: none;">
+                                <div style="font-size: 48px;">📷</div>
+                                <small>Image not found</small>
+                            </div>
+                            
+                            <?php if ($image_count > 1): ?>
+                                <span class="image-count">+<?php echo $image_count - 1; ?> more</span>
+                            <?php endif; ?>
+                            
+                        <?php elseif ($product['category_name']): ?>
+                            <div class="category-icon">
+                                <div style="font-size: 48px;">
+                                    <?php 
+                                    // Category-specific icons
+                                    switch(strtolower($product['category_name'])) {
+                                        case 'electronics': echo '📱'; break;
+                                        case 'clothing': echo '👕'; break;
+                                        case 'books': echo '📚'; break;
+                                        case 'home & kitchen': echo '🏠'; break;
+                                        case 'sports & outdoors': echo '⚽'; break;
+                                        default: echo '🛒';
+                                    }
+                                    ?>
+                                </div>
+                                <small><?php echo htmlspecialchars($product['category_name']); ?></small>
+                            </div>
+                        <?php else: ?>
+                            <div class="default-icon">
+                                <div style="font-size: 48px;">🛒</div>
+                                <small>No image</small>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                     
                     <div class="product-info">
                         <h3 class="product-title"><?php echo htmlspecialchars($product['name']); ?></h3>
@@ -316,31 +301,30 @@ $products = $stmt->fetchAll();
             </div>
         <?php endif; ?>
     </div>
-    </body>
-<script>
-// Check for category updates when returning from product_add.php
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if we need to refresh categories (set by product_add.php)
-    if (sessionStorage.getItem('categories_refresh') === 'true') {
-        // Clear the flag
-        sessionStorage.removeItem('categories_refresh');
-        
-        // Reload the page to get updated categories
-        // Or use AJAX to refresh just the dropdown
-        location.reload();
-    }
     
-    // Listen for messages from other tabs (if using BroadcastChannel)
-    if (typeof BroadcastChannel !== 'undefined') {
-        const channel = new BroadcastChannel('category_updates');
-        channel.addEventListener('message', (event) => {
-            if (event.data.type === 'categories_updated') {
-                // Refresh the page or update dropdown via AJAX
-                location.reload();
-            }
-        });
-    }
-});
-</script>
+    <script>
+    // Check for category updates when returning from product_add.php
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if we need to refresh categories (set by product_add.php)
+        if (sessionStorage.getItem('categories_refresh') === 'true') {
+            // Clear the flag
+            sessionStorage.removeItem('categories_refresh');
+            
+            // Reload the page to get updated categories
+            location.reload();
+        }
+        
+        // Listen for messages from other tabs (if using BroadcastChannel)
+        if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('category_updates');
+            channel.addEventListener('message', (event) => {
+                if (event.data.type === 'categories_updated') {
+                    // Refresh the page or update dropdown via AJAX
+                    location.reload();
+                }
+            });
+        }
+    });
+    </script>
 </body>
 </html>
