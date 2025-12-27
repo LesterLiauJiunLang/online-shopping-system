@@ -28,15 +28,14 @@ if (!empty($max_price) && !is_numeric($max_price)) {
 
 $_category = get_all_categories(db());
 
-// Get price range for placeholders (min and max available prices)
-$price_range = get_price_range(db()); // You'll need to implement this function
+$price_range = get_price_range(db()); 
 
 $products = get_filtered_products(db(), $name, $category_name, $min_price, $max_price);
 
 $user_id = $_SESSION['user_id'];
 $stmt = db()->prepare("SELECT product_id FROM wishlist WHERE user_id = ?");
 $stmt->execute([$user_id]);
-$wishlist_items = $stmt->fetchAll(PDO::FETCH_COLUMN); // returns an array of product_id
+$wishlist_items = $stmt->fetchAll(PDO::FETCH_COLUMN); 
 
 
 
@@ -117,12 +116,12 @@ $topProducts = $topStmt->fetchAll(PDO::FETCH_ASSOC);
 
            <div class="form-group">
             <label for="min_price">Min Price</label>
-            <input type="number" name="min_price" placeholder="0" value="<?= htmlspecialchars($min_price ?? '') ?>" min="0" step="0.01">
+            <input type="number" name="min_price" placeholder="0" value="<?= htmlspecialchars($min_price ?? '') ?>" min="0" step="10">
            </div>
 
            <div class="form-group">
             <label for="max_price">Max Price</label>
-            <input type="number" name="max_price" placeholder="Any" value="<?= htmlspecialchars($max_price ?? '') ?>" min="0" step="0.01">
+            <input type="number" name="max_price" placeholder="Any" value="<?= htmlspecialchars($max_price ?? '') ?>" min="0" step="10">
            </div>
 
 
