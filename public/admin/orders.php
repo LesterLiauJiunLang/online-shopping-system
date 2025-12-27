@@ -77,7 +77,7 @@ if (!empty($date_to)) {
 }
 
 // Add ordering
-$sql .= " ORDER BY o.order_date DESC";
+$sql .= " ORDER BY o.order_date ASC";
 
 // Prepare and execute the query
 $stmt = $db->prepare($sql);
@@ -127,9 +127,11 @@ $orders = $stmt->fetchAll();
                     <label>Status</label>
                     <select name="status">
                         <option value="">All Status</option>
-                        <option value="pending" <?php echo $status_filter == 'pending' ? 'selected' : ''; ?>>Pending</option>
-                        <option value="delivered" <?php echo $status_filter == 'delivered' ? 'selected' : ''; ?>>Delivered</option>
-                        <option value="cancelled" <?php echo $status_filter == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                        <option value="Pending" <?php echo $status_filter == 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="Processing" <?php echo $status_filter == 'Processing' ? 'selected' : ''; ?>>Processing</option>
+                        <option value="Shipped" <?php echo $status_filter == 'Shipped' ? 'selected' : ''; ?>>Shipped</option>
+                        <option value="Completed" <?php echo $status_filter == 'Completed' ? 'selected' : ''; ?>>Completed</option>
+                        <option value="Cancelled" <?php echo $status_filter == 'Cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                     </select>
                 </div>
                 
@@ -183,60 +185,62 @@ $orders = $stmt->fetchAll();
             </div>
             
             <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th>No.</th>
-                        <th>Customer</th>
-                        <th>Date</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Payment</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    // Add sequential numbering
-                    $counter = 1;
-                    foreach ($orders as $order): 
-                    ?>
-                    <tr>
-                        <td><?php echo $counter; ?></td>
-                        <td>
-                            <strong><?php echo htmlspecialchars($order['username']); ?></strong><br>
-                            <small><?php echo htmlspecialchars($order['email']); ?></small>
-                        </td>
-                        <td><?php echo date('M d, Y', strtotime($order['order_date'])); ?></td>
-                        <td>RM <?php echo number_format($order['total_amount'], 2); ?></td>
-                        <td>
-                            <form method="POST" style="display: inline;">
-                                <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
-                                <select name="status" onchange="this.form.submit()" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
-                                    <option value="pending" <?php echo $order['status'] == 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="delivered" <?php echo $order['status'] == 'delivered' ? 'selected' : ''; ?>>Delivered</option>
-                                    <option value="cancelled" <?php echo $order['status'] == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                                </select>
-                                <input type="hidden" name="update_status" value="1">
-                            </form>
-                        </td>
-                        <td>
-                            <span class="status status-<?php echo $order['payment_status']; ?>">
-                                <?php echo ucfirst($order['payment_status']); ?>
-                            </span>
-                        </td>
-                        <td>
-                            <div class="action-buttons">
-                                <a href="#" class="btn-view" onclick="showOrderDetails(<?php echo $order['order_id']; ?>)">View</a>
-                                <a href="orders.php?delete=<?php echo $order['order_id']; ?>" class="btn-delete" onclick="return confirm('Delete this order?')">Delete</a>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php 
-                    $counter++;
-                    endforeach; 
-                    ?>
-                </tbody>
-            </table>
+    <thead>
+        <tr>
+            <th>No.</th>
+            <th>Customer</th>
+            <th>Date</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Payment</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php 
+        // Add sequential numbering
+        $counter = 1;
+        foreach ($orders as $order): 
+        ?>
+        <tr>
+            <td><?php echo $counter; ?></td>
+            <td>
+                <strong><?php echo htmlspecialchars($order['username']); ?></strong><br>
+                <small><?php echo htmlspecialchars($order['email']); ?></small>
+            </td>
+            <td><?php echo date('d M Y', strtotime($order['order_date'])); ?></td>
+            <td>RM <?php echo number_format($order['total_amount'], 2); ?></td>
+            <td>
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
+                    <select name="status" onchange="this.form.submit()" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                        <option value="Pending" <?php echo $order['status'] == 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="Processing" <?php echo $order['status'] == 'Processing' ? 'selected' : ''; ?>>Processing</option>
+                        <option value="Shipped" <?php echo $order['status'] == 'Shipped' ? 'selected' : ''; ?>>Shipped</option>
+                        <option value="Completed" <?php echo $order['status'] == 'Completed' ? 'selected' : ''; ?>>Completed</option>
+                        <option value="Cancelled" <?php echo $order['status'] == 'Cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                    </select>
+                    <input type="hidden" name="update_status" value="1">
+                </form>
+            </td>
+            <td>
+                <span class="status status-<?php echo $order['payment_status']; ?>">
+                    <?php echo ucfirst($order['payment_status']); ?>
+                </span>
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <a href="#" class="btn-view" onclick="showOrderDetails(<?php echo $order['order_id']; ?>)">View</a>
+                    <a href="orders.php?delete=<?php echo $order['order_id']; ?>" class="btn-delete" onclick="return confirm('Delete this order?')">Delete</a>
+                </div>
+            </td>
+        </tr>
+        <?php 
+        $counter++;
+        endforeach; 
+        ?>
+    </tbody>
+</table>
             
             <div class="order-details" id="orderDetails">
                 <!-- Order details will be loaded here via JavaScript -->
