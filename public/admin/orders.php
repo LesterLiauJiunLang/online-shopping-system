@@ -77,7 +77,7 @@ if (!empty($date_to)) {
 }
 
 // Add ordering
-$sql .= " ORDER BY o.order_date DESC";
+$sql .= " ORDER BY o.order_date ASC";
 
 // Prepare and execute the query
 $stmt = $db->prepare($sql);
@@ -127,9 +127,11 @@ $orders = $stmt->fetchAll();
                     <label>Status</label>
                     <select name="status">
                         <option value="">All Status</option>
-                        <option value="pending" <?php echo $status_filter == 'pending' ? 'selected' : ''; ?>>Pending</option>
-                        <option value="delivered" <?php echo $status_filter == 'delivered' ? 'selected' : ''; ?>>Delivered</option>
-                        <option value="cancelled" <?php echo $status_filter == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                        <option value="Pending" <?php echo $status_filter == 'Pending' ? 'selected' : ''; ?>>Pending</option>
+                        <option value="Processing" <?php echo $status_filter == 'Processing' ? 'selected' : ''; ?>>Processing</option>
+                        <option value="Shipped" <?php echo $status_filter == 'Shipped' ? 'selected' : ''; ?>>Shipped</option>
+                        <option value="Completed" <?php echo $status_filter == 'Completed' ? 'selected' : ''; ?>>Completed</option>
+                        <option value="Cancelled" <?php echo $status_filter == 'Cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                     </select>
                 </div>
                 
