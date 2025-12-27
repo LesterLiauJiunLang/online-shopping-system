@@ -226,7 +226,7 @@ $orders = $stmt->fetchAll();
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <a href="#" class="btn-view" onclick="showOrderDetails(<?php echo $order['order_id']; ?>)">View</a>
+                                <a href="order_detail.php?order_id=<?php echo $order['order_id']; ?>" class="btn-view">View</a>
                                 <a href="orders.php?delete=<?php echo $order['order_id']; ?>" class="btn-delete" onclick="return confirm('Delete this order?')">Delete</a>
                             </div>
                         </td>
