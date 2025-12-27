@@ -14,7 +14,7 @@ require_once __DIR__ . "/../../includes/header.php";
 //Fetch all products====================================================
 
 $name = req('name'); 
-$category_id = req('category_name'); 
+$category_name = req('category_name'); 
 $min_price = req('min_price');
 $max_price = req('max_price');
 
@@ -31,7 +31,15 @@ $_category = get_all_categories(db());
 // Get price range for placeholders (min and max available prices)
 $price_range = get_price_range(db()); // You'll need to implement this function
 
-$products = get_filtered_products(db(), $name, $category_id, $min_price, $max_price);
+$products = get_filtered_products(db(), $name, $category_name, $min_price, $max_price);
+
+$user_id = $_SESSION['user_id'];
+$stmt = db()->prepare("SELECT product_id FROM wishlist WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$wishlist_items = $stmt->fetchAll(PDO::FETCH_COLUMN); // returns an array of product_id
+
+
+
 ?>
 
 <!DOCTYPE html>
@@ -45,13 +53,53 @@ $products = get_filtered_products(db(), $name, $category_id, $min_price, $max_pr
 </head>
 
 <body>
-    <!-- Banner Section -->
-    <header class="banner">
-        <div class="banner-text">
-            <h1>Welcome to GadgetMart</h1>
-            <p>Amazing products at great prices!</p>
+    <?php
+$topStmt = db()->prepare("
+    SELECT 
+        p.product_id,
+        p.name,
+        p.price,
+        COALESCE(pi.file_path, p.image_url) AS image_url,
+        COALESCE(SUM(oi.quantity), 0) AS total_sold
+    FROM products p
+    LEFT JOIN product_image pi 
+        ON pi.product_id = p.product_id
+        AND pi.sort_order = 0
+    LEFT JOIN order_items oi 
+        ON p.product_id = oi.product_id
+    GROUP BY p.product_id, p.name, p.price, image_url
+    ORDER BY total_sold DESC
+    LIMIT 4
+");
+$topStmt->execute();
+$topProducts = $topStmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<!-- Top Selling Section -->
+<section class="top-selling">
+    <h2>🔥 Top 4 Selling Products</h2>
+    <div class="product-grid">
+
+        <?php foreach ($topProducts as $product): ?>
+        <?php 
+            $image_url = !empty($product['image_url']) 
+                ? $product['image_url'] 
+                : '/assets/img/no-image.png';
+        ?>
+        <div class="product-card">
+            <div class="product-img-wrapper">
+                <img src="<?= htmlspecialchars($image_url) ?>" class="product-img" data-get="products_detail.php?id=<?= $product['product_id'] ?>"> 
+            </div>
+
+            <div class="product-info">
+                <?= htmlspecialchars($product['name']); ?> |
+                RM <?= number_format($product['price'], 2); ?>
+            </div>
         </div>
-    </header>
+        <?php endforeach; ?>
+
+    </div>
+</section>
     
     <!-- Products Section -->
     <main class="products-section">
@@ -64,7 +112,7 @@ $products = get_filtered_products(db(), $name, $category_id, $min_price, $max_pr
         </div>
            <div class="form-group">
             <label for="category_name">Category</label> 
-             <?= html_select('category_name', $_category, 'All') ?>
+             <?= html_select('category_name', $_category, 'All', $category_name) ?>
            </div>
 
            <div class="form-group">
@@ -91,8 +139,10 @@ $products = get_filtered_products(db(), $name, $category_id, $min_price, $max_pr
         <p>No products found.</p>
     <?php else: ?>
         <?php foreach ($products as $product): ?>
-            <?php
             
+            <?php
+            $isInWishlist = in_array($product['product_id'], $wishlist_items);
+
                 $image_url = !empty($product['image_url'])
                     ? $product['image_url']
                     : '/assets/img/no-image.png';
@@ -101,7 +151,7 @@ $products = get_filtered_products(db(), $name, $category_id, $min_price, $max_pr
             <div class="product-card">
                 <div class="product-img-wrapper">
                  <img src="<?= htmlspecialchars($image_url) ?>" class="product-img" data-get="products_detail.php?id=<?= $product['product_id'] ?>">
-                 <button class="wishlist-btn" 
+                 <button class="wishlist-btn <?= $isInWishlist ? 'active' : '' ?>"
                   data-product-id="<?= $product['product_id'] ?>" 
                   aria-label="Add to Wishlist">
                      ♥
@@ -124,7 +174,7 @@ $products = get_filtered_products(db(), $name, $category_id, $min_price, $max_pr
     
     <script>
         document.querySelectorAll('[data-get]').forEach(el => {
-    el.addEventListener('click', () => {
+        el.addEventListener('click', () => {
         window.location.href = el.dataset.get;
     });
 });

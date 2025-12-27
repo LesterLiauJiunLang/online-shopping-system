@@ -173,6 +173,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: 0.3s;
 }
 
 .wishlist-btn:hover {
@@ -257,4 +258,17 @@
         grid-template-columns: 1fr;
         text-align: center;
     }
+}
+
+.top-selling {
+    padding: 20px;
+    background: #fff;
+    margin-bottom: 30px;
+}
+
+.top-selling h2 {
+    margin-bottom: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
 }

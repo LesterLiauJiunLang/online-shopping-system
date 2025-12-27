@@ -420,7 +420,7 @@ $_title = 'My Profile';
                 <?php endforeach; ?>
                 <?php if (count($member_stats['recent_orders']) > 0): ?>
                 <div class="view-all-orders">
-                    <a href="orders.php" class="btn-verify">
+                    <a href="members/order_history.php" class="btn-verify">
                         <i class="fas fa-list"></i> View All Orders
                     </a>
                 </div>
