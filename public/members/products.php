@@ -66,7 +66,7 @@ $topStmt = db()->prepare("
         AND pi.sort_order = 0
     LEFT JOIN order_items oi 
         ON p.product_id = oi.product_id
-    GROUP BY p.product_id, p.name, p.price, image_url
+    GROUP BY p.product_id, p.name, p.price, COALESCE(pi.file_path, p.image_url)
     ORDER BY total_sold DESC
     LIMIT 4
 ");
